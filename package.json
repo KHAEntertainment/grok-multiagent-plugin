@@ -1,0 +1,73 @@
+{
+  "name": "@openclaw/grok-swarm",
+  "version": "1.0.0",
+  "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Give any AI coding agent access to a 4-agent swarm with ~2M token context.",
+  "keywords": [
+    "grok",
+    "multi-agent",
+    "xai",
+    "openrouter",
+    "openclaw",
+    "claude-code",
+    "code-review",
+    "refactoring",
+    "security",
+    "ai"
+  ],
+  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
+  "bugs": {
+    "url": "https://github.com/KHAEntertainment/grok-multiagent-plugin/issues"
+  },
+  "license": "MIT",
+  "author": "OpenClaw <support@openclaw.dev>",
+  "maintainers": [
+    {
+      "name": "OpenClaw",
+      "email": "support@openclaw.dev"
+    }
+  ],
+  "main": "dist/index.js",
+  "bin": {
+    "grok-swarm": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "preinstall": "node scripts/preinstall-check.js",
+    "postinstall": "node scripts/postinstall.js",
+    "prepublishOnly": "npm run build",
+    "build": "node scripts/build.js",
+    "pretest": "npm run build",
+    "test": "node scripts/test.js",
+    "lint": "eslint dist/",
+    "clean": "rm -rf dist/"
+  },
+  "dependencies": {
+    "openai": "^4.28.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KHAEntertainment/grok-multiagent-plugin.git"
+  },
+  "categories": [
+    "ai",
+    "coding",
+    "developer-tools",
+    "plugins"
+  ]
+}
