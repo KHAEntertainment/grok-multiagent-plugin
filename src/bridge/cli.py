@@ -45,6 +45,13 @@ def main():
     if args.files:
         print(f"Read {len(args.files)} file(s) — {len(context):,} chars", file=sys.stderr)
 
+    # Parse tools if provided
+    tools = None
+    if args.tools:
+        import json
+        with open(args.tools, 'r') as f:
+            tools = json.load(f)
+
     print(f"Calling Grok 4.20 (mode={args.mode}, 4 agents)...", file=sys.stderr)
 
     result = call_grok(
@@ -52,12 +59,14 @@ def main():
         mode=args.mode,
         context=context,
         system_override=args.system,
-        tools=None,
+        tools=tools,
         timeout=args.timeout,
     )
 
     if args.output:
-        Path(args.output).write_text(result)
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(result)
         print(f"Output written to {args.output}", file=sys.stderr)
     else:
         print(result)

@@ -39,13 +39,16 @@ install_openclaw() {
     # Copy plugin
     cp -r "$PROJECT_DIR/dist/openclaw/plugin/"* ~/.openclaw/extensions/grok-swarm/
 
-    # Copy skill
+    # Copy bridge files to skill directory
     cp -r "$PROJECT_DIR/dist/openclaw/bridge/"* ~/.openclaw/skills/grok-refactor/
+
+    # Copy skill payload (includes metadata and skill definition)
+    cp -r "$PROJECT_DIR/dist/openclaw/skills/grok-refactor/"* ~/.openclaw/skills/grok-refactor/
 
     # Set up Python venv
     if command -v python3 &> /dev/null; then
         python3 -m venv ~/.openclaw/skills/grok-refactor/.venv
-        ~/.openclaw/skills/grok-refactor/.venv/bin/pip install -q openai>=1.0.0
+        ~/.openclaw/skills/grok-refactor/.venv/bin/pip install -q "openai>=1.0.0"
     fi
 
     log "OpenClaw installation complete!"
@@ -63,8 +66,10 @@ install_claude() {
         "$SCRIPT_DIR/build.sh"
     fi
 
-    # Copy plugin
-    cp -r "$PROJECT_DIR/dist/claude" ~/.claude/plugins/grok-swarm
+    # Copy plugin (idempotent - remove existing first to avoid nesting/stale files)
+    rm -rf ~/.claude/plugins/grok-swarm
+    mkdir -p ~/.claude/plugins/grok-swarm
+    cp -r "$PROJECT_DIR/dist/claude/"* ~/.claude/plugins/grok-swarm/
 
     # Install CLI
     if [ -f "$PROJECT_DIR/pyproject.toml" ]; then

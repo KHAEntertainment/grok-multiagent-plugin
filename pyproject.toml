@@ -12,3 +12,10 @@ dependencies = ["openai>=1.0.0"]
 
 [project.scripts]
 grok-swarm = "bridge.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["bridge*"]

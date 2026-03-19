@@ -37,8 +37,18 @@ cp -r "$PROJECT_DIR/platforms/claude/skills" "$DIST_DIR/claude/"
 mkdir -p "$DIST_DIR/openclaw/skills"
 cp -r "$PROJECT_DIR/skills/grok-refactor" "$DIST_DIR/openclaw/skills/"
 
-# Version substitution
-find "$DIST_DIR" -type f \( -name "*.json" -o -name "*.md" -o -name "*.toml" \) -exec sed -i "s/1\.0\.0/$VERSION/g" {} \; 2>/dev/null || true
+# Version substitution (targeted to avoid rewriting dependency constraints)
+find "$DIST_DIR" -type f \( -name "*.json" -o -name "*.md" -o -name "*.toml" \) | while read -r file; do
+    # Create temp file for portable sed (works on macOS and Linux)
+    tmp_file="${file}.tmp"
+    # Match only explicit version fields, not dependency constraints
+    # JSON: "version": "1.0.0"  TOML: version = "1.0.0"  Badges: /v1.0.0 or -1.0.0-
+    sed -e 's/\("version"\s*:\s*"\)1\.0\.0"/\1'"$VERSION"'"/g' \
+        -e 's/\(version\s*=\s*"\)1\.0\.0"/\1'"$VERSION"'"/g' \
+        -e 's/\(\/v\)1\.0\.0/\1'"$VERSION"'/g' \
+        -e 's/\(-\)1\.0\.0\(-\)/\1'"$VERSION"'\2/g' \
+        "$file" > "$tmp_file" && mv "$tmp_file" "$file"
+done
 
 # Make scripts executable
 chmod +x "$DIST_DIR/openclaw/bridge/"*.py 2>/dev/null || true
