@@ -11,12 +11,128 @@ Give your OpenClaw agents access to a 4-agent swarm with ~2M token context for c
 
 ## Features
 
+<<<<<<< HEAD
 - **4-Agent Swarm** — Grok 4.20 coordinates multiple agents for deeper analysis
 - **Massive Context** — ~2M token window, handles entire codebases
 - **5 Modes** — Analyze, Refactor, Code, Reason, Orchestrate
 - **Tool Passthrough** — Pass OpenAI-format tool schemas for function calling
 - **File Writing** — Write annotated code blocks directly to disk
 - **Timeout Safety** — Process-level timeout enforcement prevents hangs
+=======
+You've been building with AI coding agents for a while now. They're great — they can write features, refactor modules, analyze codebases. But there's always been this ceiling. The models they run on are designed for single-turn conversations. They can collaborate with themselves behind the scenes to think through complex problems.
+
+**Enter Grok 4.20 Multi-Agent Beta.**
+
+It's different. Instead of one model responding, it's *four agents coordinating* in real-time. An orchestrator, specialists, critics — all working together to break down your request and reason through it from multiple angles. It can hold ~2M tokens of context — that's entire codebases in a single request.
+
+**The Problem:**
+
+Grok 4.20 is groundbreaking, but it doesn't play nicely with current coding tools. Claude Code doesn't have a Grok integration. OpenClaw's tooling system doesn't support multi-agent swarms. If you wanted to use Grok, you'd have to hack together custom scripts or modify your platform's core components. Not ideal.
+
+**The Solution:**
+
+This plugin bridges that gap. It makes Grok 4.20 available as a tool that any agent in Claude Code or OpenClaw can call. No core modifications, no hacking — just install and go.
+
+Now when your agent needs deep codebase analysis, large-scale refactoring, or complex reasoning, it can delegate to Grok's swarm and get back the kind of coordinated, multi-perspective thinking that single models can't deliver.
+
+---
+
+## File Writing Capabilities
+
+Grok Swarm can now **write files directly** from code blocks in its responses. This solves the context flooding problem — Grok writes files to disk, and only a brief summary returns to your agent.
+
+### How It Works
+
+Grok responses with code blocks like:
+````
+```python src/auth.py
+import jwt
+...
+```
+````
+
+Are automatically parsed and written to the output directory.
+
+### Usage
+
+| Command | Behavior |
+|---------|----------|
+| `--output-dir ./src` | Preview files (dry-run) |
+| `--apply --output-dir ./src` | Write files to `./src` |
+| `--apply --execute "make test"` | Write files, then run tests |
+
+### Example Workflow
+
+```bash
+# Ask Grok to generate a module and write it
+python -m src.bridge.cli code \
+  --prompt "Write a FastAPI auth module with JWT" \
+  --output-dir ./src \
+  --apply
+
+# Then run tests
+python -m src.bridge.cli code \
+  --prompt "Refactor auth to use async" \
+  --apply --execute "pytest tests/" \
+  --output-dir ./src
+```
+
+### Morph LLM Integration
+
+For **partial file edits** (not full replacement), use the `--use-morph` flag:
+
+```bash
+python -m src.bridge.cli refactor \
+  --prompt "Convert this function to async" \
+  --use-morph --apply
+```
+
+This requires Morph LLM MCP installed:
+
+```bash
+claude mcp add morphllm
+```
+
+---
+
+## Known Limitations
+
+> **Note:** When using `--apply`, Grok Swarm parses code blocks and writes files. For targeted edits within existing files, use `--use-morph` (requires Morph LLM MCP).
+
+### Why This Matters
+
+Grok can hold ~1.5M tokens of context and generate ~350K token responses. If that entire response floods back through your orchestrator's context window, you've just wasted precious tokens and slowed down your agent.
+
+```text
+Current Flow:
+Files (1.5M tokens) → Grok → Full response (376K) → Orchestrator (flooded!)
+
+Ideal Flow:
+Files (1.5M tokens) → Grok → Writes files + brief summary → Orchestrator (clean)
+```
+
+### Current Use Cases
+
+Grok Swarm now supports **direct file writing**:
+- ✅ **Code generation with file output** — Grok writes files directly
+- ✅ **Codebase analysis** — Security audits, architecture reviews
+- ✅ **Refactoring with partial edits** — Use `--use-morph` for targeted changes
+- ✅ **Complex reasoning** — Research synthesis, decision making
+
+The `--apply` flag makes Grok write files to disk. Combined with `--execute`, you can build generate → test workflows.
+
+---
+
+## What It Does
+
+| Feature | Why It Matters |
+|----------|------------------|
+| **4-Agent Coordination** | Multiple perspectives on every request |
+| **2M Token Context** | Holds entire codebases without truncation |
+| **5 Task Modes** | Analyze, Refactor, Generate, Reason, Orchestrate |
+| **Dual Platform** | Works in both Claude Code and OpenClaw |
+| **Zero Core Changes** | Drop-in tool, no platform modifications |
+>>>>>>> 574902f (Add file writing and Morph LLM integration)
 
 ---
 
