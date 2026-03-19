@@ -14,6 +14,7 @@ Give any AI coding agent access to Grok 4.20's 4-agent swarm with ~2M token cont
 - **Massive Context** — ~2M token window
 - **5 Modes** — Analyze, Refactor, Code, Reason, Orchestrate
 - **Dual Platform** — Works with both OpenClaw and Claude Code
+- **Secure Config** — API key stored locally, never exposed
 
 ---
 
@@ -34,21 +35,18 @@ cd grok-multiagent-plugin
 ./scripts/build.sh
 ```
 
-### 2. Install
+### 2. Install & Configure
 
-**Both platforms:**
-```bash
-./scripts/install.sh both
-```
-
-**OpenClaw only:**
+**OpenClaw:**
 ```bash
 ./scripts/install.sh openclaw
+openclaw gateway restart
 ```
 
-**Claude Code only:**
+**Claude Code:**
 ```bash
 ./scripts/install.sh claude
+./scripts/setup.sh   # Enter your OpenRouter API key
 ```
 
 ---
@@ -67,8 +65,7 @@ tools.grok_swarm({ prompt: "...", mode: "analyze" })
 
 ## Claude Code Usage
 
-```bash
-# Via skill
+```
 /grok-swarm:analyze Review the security of the auth module
 /grok-swarm:refactor Convert this to async/await
 /grok-swarm:code Write a FastAPI user registration endpoint
@@ -89,6 +86,27 @@ tools.grok_swarm({ prompt: "...", mode: "analyze" })
 
 ---
 
+## Configuration
+
+### Claude Code Setup
+
+Claude Code doesn't have built-in secret management. We use a simple file-based approach:
+
+```bash
+./scripts/setup.sh
+```
+
+API key is stored in `~/.config/grok-swarm/config.json` with mode 600 (readable only by you).
+
+### OpenClaw Setup
+
+Uses OpenClaw's built-in auth profiles:
+```
+~/.openclaw/agents/coder/agent/auth-profiles.json
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -96,10 +114,10 @@ tools.grok_swarm({ prompt: "...", mode: "analyze" })
 ├── platforms/
 │   ├── openclaw/         # OpenClaw plugin
 │   └── claude/           # Claude Code plugin
-├── dist/                 # Built artifacts
 ├── scripts/
 │   ├── build.sh          # Build for both platforms
-│   └── install.sh       # Install script
+│   ├── install.sh        # Install script
+│   └── setup.sh          # API key setup (Claude Code)
 └── VERSION
 ```
 

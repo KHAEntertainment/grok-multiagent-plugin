@@ -56,11 +56,26 @@ MODE_PROMPTS = {
 
 
 def get_api_key():
-    """Resolve OpenRouter API key from OpenClaw auth profiles or env."""
-    key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("OPENCLAW_OPENROUTER_DEFAULT_KEY")
+    """Resolve OpenRouter API key from config file, environment, or OpenClaw auth profiles."""
+
+    # 1. Environment variables
+    key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("XAI_API_KEY")
     if key:
         return key
 
+    # 2. Grok Swarm config file (for Claude Code without secret management)
+    grok_config = Path.home() / ".config" / "grok-swarm" / "config.json"
+    if grok_config.exists():
+        try:
+            with open(grok_config) as f:
+                data = json.load(f)
+            key = data.get("api_key")
+            if key:
+                return key
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    # 3. OpenClaw auth profiles (for OpenClaw integration)
     auth_paths = [
         Path.home() / ".openclaw" / "agents" / "coder" / "agent" / "auth-profiles.json",
         Path.home() / ".openclaw" / "agents" / "main" / "agent" / "auth-profiles.json",

@@ -9,6 +9,18 @@ version: 1.0.0
 
 Give Claude Code access to a 4-agent swarm with ~2M token context for powerful code analysis, refactoring, and reasoning.
 
+## Setup (One-Time)
+
+```bash
+# 1. Install the CLI
+pip install -e .
+
+# 2. Configure your API key
+./scripts/setup.sh
+```
+
+**Get an OpenRouter API key at:** https://openrouter.ai/keys
+
 ## Modes
 
 | Mode | Description |
@@ -17,18 +29,6 @@ Give Claude Code access to a 4-agent swarm with ~2M token context for powerful c
 | `analyze` | Security, bug, and architecture audit |
 | `code` | Generate clean, production-ready code |
 | `reason` | Collaborative multi-perspective reasoning |
-
-## Installation
-
-1. Install the bridge CLI:
-   ```bash
-   pip install -e .
-   ```
-
-2. Link this plugin:
-   ```bash
-   ln -s ~/.claude/plugins/grok-swarm ~/.claude/plugins/
-   ```
 
 ## Usage
 
@@ -44,3 +44,12 @@ Give Claude Code access to a 4-agent swarm with ~2M token context for powerful c
 - Python 3.8+
 - `openai` package
 - OpenRouter API key with Grok 4.20 access
+
+## Configuration
+
+API key is stored in `~/.config/grok-swarm/config.json` (mode 600).
+
+To change your API key:
+```bash
+./scripts/setup.sh
+```
