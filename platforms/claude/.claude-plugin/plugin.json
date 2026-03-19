@@ -1,0 +1,34 @@
+{
+  "manifestVersion": 1,
+  "name": "grok-swarm",
+  "version": "1.0.0",
+  "displayName": "Grok Swarm",
+  "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Use for codebase analysis, refactoring, code generation, and complex reasoning.",
+  "author": {
+    "name": "OpenClaw"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
+  "skills": [
+    {
+      "id": "refactor",
+      "name": "Code Refactor",
+      "description": "Intelligently refactor code while preserving intent"
+    },
+    {
+      "id": "analyze",
+      "name": "Code Analysis",
+      "description": "Deep code analysis for bugs, security, and architecture"
+    },
+    {
+      "id": "code",
+      "name": "Code Generation",
+      "description": "Generate clean, production-ready code"
+    },
+    {
+      "id": "reason",
+      "name": "Complex Reasoning",
+      "description": "Multi-perspective reasoning and research synthesis"
+    }
+  ]
+}

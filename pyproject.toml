@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grok-swarm"
+version = "1.0.0"
+description = "Multi-agent intelligence powered by Grok 4.20 via OpenRouter"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["openai>=1.0.0"]
+
+[project.scripts]
+grok-swarm = "bridge.cli:main"
