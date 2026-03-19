@@ -88,24 +88,60 @@ Grok can generate ~350K token responses. Without file writing, that floods your 
 
 ---
 
-## Quick Start
+## Installation
 
-### For Claude Code
+Choose the method that fits your platform:
+
+### Option 1: NPM (Recommended — CLI Tool)
 
 ```bash
-# 1. Clone the repo
+npm install -g @openclaw/grok-swarm
+
+# Set up API key
+./scripts/setup.sh
+```
+
+### Option 2: Claude Code Marketplace
+
+```bash
+# Add the marketplace
+/plugin marketplace add https://github.com/KHAEntertainment/grok-multiagent-plugin
+
+# Install the plugin
+/plugin install grok-swarm@khaentertainment
+
+# Set up API key
+./scripts/setup.sh
+```
+
+### Option 3: ClawHub (OpenClaw)
+
+```bash
+clawhub install grok-swarm
+```
+
+### Option 4: Git Clone
+
+```bash
 git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
 cd grok-multiagent-plugin
 
-# 2. Install for Claude Code
-./scripts/install.sh claude
+# Auto-detect and install
+./install.sh
 
-# 3. Set up your API key
-./scripts/setup.sh
-# Paste your OpenRouter API key (get one at https://openrouter.ai/keys)
+# Or install for specific platform
+./install.sh claude   # Claude Code only
+./install.sh openclaw # OpenClaw only
+./install.sh both     # Both platforms
 ```
 
-Then use it directly:
+For detailed instructions for each method, see [INSTALL.md](INSTALL.md).
+
+---
+
+## Quick Start
+
+### For Claude Code
 
 ```
 /grok-swarm:analyze Review the security of my auth module
@@ -117,47 +153,19 @@ Then use it directly:
 ### For OpenClaw
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
-cd grok-multiagent-plugin
-
-# 2. Install for OpenClaw
-./scripts/install.sh openclaw
-```
-
-Add to your `openclaw.json`:
-
-```json
-{
-  "plugins": {
-    "allow": ["grok-swarm"],
-    "entries": {
-      "grok-swarm": {
-        "enabled": true
-      }
-    }
-  },
-  "agents": {
-    "list": [{
-      "id": "coder",
-      "tools": {
-        "allow": ["grok_swarm"]
-      }
-    }]
-  }
-}
-```
-
-Restart gateway:
-
-```bash
+# After ClawHub or git install, add to openclaw.json:
 openclaw gateway restart
 ```
 
-Verify:
+Then use in your agent:
 
-```bash
-openclaw status | grep grok
+```javascript
+const result = await tools.grok_swarm({
+  prompt: "Analyze the architecture of this codebase",
+  mode: "analyze",
+  files: ["src/", "tests/"],
+  timeout: 180
+});
 ```
 
 ---
