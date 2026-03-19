@@ -57,7 +57,7 @@ MODE_PROMPTS = {
 
 
 def get_api_key():
-    """Resolve OpenRouter API key from config file, environment, or OpenClaw auth profiles."""
+    """Resolve OpenRouter API key from config file or environment."""
 
     # 1. Environment variables
     key = os.environ.get("OPENROUTER_API_KEY") or os.environ.get("XAI_API_KEY")
@@ -76,29 +76,6 @@ def get_api_key():
         except (json.JSONDecodeError, KeyError):
             pass
 
-    # 3. OpenClaw auth profiles (for OpenClaw integration)
-    auth_paths = [
-        Path.home() / ".openclaw" / "agents" / "coder" / "agent" / "auth-profiles.json",
-        Path.home() / ".openclaw" / "agents" / "main" / "agent" / "auth-profiles.json",
-        Path.home() / ".openclaw" / "auth-profiles.json",
-        Path.home() / ".config" / "openclaw" / "auth-profiles.json",
-    ]
-    for auth_path in auth_paths:
-        if auth_path.exists():
-            try:
-                with open(auth_path) as f:
-                    data = json.load(f)
-                profiles = data.get("profiles", {})
-                or_profile = profiles.get("openrouter:default", {})
-                key = or_profile.get("key") or or_profile.get("apiKey")
-                if key:
-                    return key
-                default = profiles.get("default", {})
-                key = default.get("openrouter", {}).get("apiKey") or default.get("openrouter", {}).get("key")
-                if key:
-                    return key
-            except (json.JSONDecodeError, KeyError):
-                continue
     return None
 
 
@@ -230,7 +207,7 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
     api_key = get_api_key()
     if not api_key:
         print("ERROR: No OpenRouter API key found.", file=sys.stderr)
-        print("Set OPENROUTER_API_KEY env var or configure in OpenClaw auth-profiles.json", file=sys.stderr)
+        print("Set OPENROUTER_API_KEY env var or create ~/.config/grok-swarm/config.json", file=sys.stderr)
         sys.exit(1)
 
     # Resolve system prompt
