@@ -14,6 +14,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -131,6 +132,54 @@ def load_tools(tools_path):
     return tools
 
 
+def parse_and_write_files(response_text, output_dir):
+    """
+    Scan response for fenced code blocks with filename annotations and write to disk.
+    
+    Supports patterns:
+      ```lang:path/to/file ... ```
+      ```lang
+      // FILE: path/to/file
+      ...
+      ```
+    
+    Returns list of (relative_path, byte_count) tuples written.
+    """
+    written = []
+    output_path = Path(output_dir)
+    
+    # Pattern for lang:path at start of block (language tag contains path)
+    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
+    # Pattern for // FILE: or # FILE: markers
+    file_marker_pattern = re.compile(r'^\s*(?://|#)\s*FILE:\s*(.+?)\s*$', re.MULTILINE)
+    
+    # Split into code blocks by ``` fences
+    parts = re.split(r'```', response_text)
+    
+    for part in parts:
+        # Check for lang:path at start (language tag contains the path)
+        lang_match = lang_path_pattern.match(part)
+        if lang_match:
+            file_path = lang_match.group(2)
+            content = part[lang_match.end():]
+            dest = output_path / file_path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            byte_count = dest.write_text(content.strip(), errors='replace')
+            written.append((file_path, byte_count))
+            continue
+        
+        # Check for // FILE: or # FILE: marker within the block
+        marker_match = file_marker_pattern.search(part)
+        if marker_match:
+            file_path = marker_match.group(1).strip()
+            content = part[marker_match.end():]
+            dest = output_path / file_path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            byte_count = dest.write_text(content.strip(), errors='replace')
+            written.append((file_path, byte_count))
+    
+    return written
+
 def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120):
     """Make the API call to Grok 4.20 Multi-Agent Beta."""
     api_key = get_api_key()
@@ -239,6 +288,10 @@ def main():
     parser.add_argument("--tools", help="Path to JSON file with OpenAI-format tool definitions")
     parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120)")
     parser.add_argument("--output", help="Output file path (default: stdout)")
+    parser.add_argument("--write-files", action="store_true",
+                        help="Parse response for annotated code blocks and write to --output-dir")
+    parser.add_argument("--output-dir", default="./grok-output/",
+                        help="Directory for file writes (default: ./grok-output/)")
 
     args = parser.parse_args()
 
@@ -273,7 +326,19 @@ def main():
         Path(args.output).write_text(result)
         print(f"Written to: {args.output}", file=sys.stderr)
     else:
-        print(result)
+        if args.write_files:
+            written = parse_and_write_files(result, args.output_dir)
+            if written:
+                total_bytes = sum(b for _, b in written)
+                print(f"Wrote {len(written)} files to {args.output_dir}")
+                for rel_path, byte_count in written:
+                    print(f"  {rel_path} ({byte_count:,} bytes)")
+                print(f"Total: {total_bytes:,} bytes", file=sys.stderr)
+            else:
+                print("No annotated files found in response", file=sys.stderr)
+                print(result)
+        else:
+            print(result)
 
 
 if __name__ == "__main__":
