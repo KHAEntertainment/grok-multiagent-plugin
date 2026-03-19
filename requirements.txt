@@ -1,0 +1,2 @@
+# Grok Swarm Bridge Dependencies
+openai>=2.28.0
