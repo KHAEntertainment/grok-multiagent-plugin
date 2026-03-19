@@ -14,10 +14,10 @@
         "source": "git-subdir",
         "url": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
         "path": "platforms/claude",
-        "ref": "main"
+        "ref": "master"
       },
       "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. 4-agent swarm with ~2M token context for code analysis, refactoring, and reasoning.",
-      "version": "1.0.4",
+      "version": "1.0.9",
       "author": {
         "name": "OpenClaw"
       },
