@@ -17,7 +17,7 @@
         "ref": "main"
       },
       "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. 4-agent swarm with ~2M token context for code analysis, refactoring, and reasoning.",
-      "version": "1.0.0",
+      "version": "1.0.4",
       "author": {
         "name": "OpenClaw"
       },
