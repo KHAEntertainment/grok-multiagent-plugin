@@ -26,9 +26,67 @@ Now when your agent needs deep codebase analysis, large-scale refactoring, or co
 
 ---
 
+## File Writing Capabilities
+
+Grok Swarm can now **write files directly** from code blocks in its responses. This solves the context flooding problem — Grok writes files to disk, and only a brief summary returns to your agent.
+
+### How It Works
+
+Grok responses with code blocks like:
+````
+```python src/auth.py
+import jwt
+...
+```
+````
+
+Are automatically parsed and written to the output directory.
+
+### Usage
+
+| Command | Behavior |
+|---------|----------|
+| `--output-dir ./src` | Preview files (dry-run) |
+| `--apply --output-dir ./src` | Write files to `./src` |
+| `--apply --execute "make test"` | Write files, then run tests |
+
+### Example Workflow
+
+```bash
+# Ask Grok to generate a module and write it
+python -m src.bridge.cli code \
+  --prompt "Write a FastAPI auth module with JWT" \
+  --output-dir ./src \
+  --apply
+
+# Then run tests
+python -m src.bridge.cli code \
+  --prompt "Refactor auth to use async" \
+  --apply --execute "pytest tests/" \
+  --output-dir ./src
+```
+
+### Morph LLM Integration
+
+For **partial file edits** (not full replacement), use the `--use-morph` flag:
+
+```bash
+python -m src.bridge.cli refactor \
+  --prompt "Convert this function to async" \
+  --use-morph --apply
+```
+
+This requires Morph LLM MCP installed:
+
+```bash
+claude mcp add morphllm
+```
+
+---
+
 ## Known Limitations
 
-> **Important:** Grok currently operates as a **powerful consultant** — it reads your codebase, coordinates 4 agents to analyze it, and returns detailed results. However, it doesn't write files or execute code directly.
+> **Note:** When using `--apply`, Grok Swarm parses code blocks and writes files. For targeted edits within existing files, use `--use-morph` (requires Morph LLM MCP).
 
 ### Why This Matters
 
@@ -44,25 +102,13 @@ Files (1.5M tokens) → Grok → Writes files + brief summary → Orchestrator (
 
 ### Current Use Cases
 
-For now, Grok Swarm works best for:
+Grok Swarm now supports **direct file writing**:
+- ✅ **Code generation with file output** — Grok writes files directly
 - ✅ **Codebase analysis** — Security audits, architecture reviews
-- ✅ **Refactoring guidance** — Get suggestions, apply them yourself
-- ✅ **Code generation** — Generate new features, paste into your codebase
+- ✅ **Refactoring with partial edits** — Use `--use-morph` for targeted changes
 - ✅ **Complex reasoning** — Research synthesis, decision making
 
-### Future Enhancement
-
-The ideal architecture would be:
-1. Grok writes modified files directly to disk
-2. Grok returns only a brief summary to orchestrator
-3. Orchestrator gets clean context + written files
-
-This requires a **capability system** in OpenClaw where:
-- Core defines contracts like `FileSystemOperation` or `CodeExecution`
-- Grok plugin implements those contracts
-- Orchestrator gets summaries, not full outputs
-
-**See [GitHub Issue #1](https://github.com/KHAEntertainment/grok-multiagent-plugin/issues/1) for the feature request.**
+The `--apply` flag makes Grok write files to disk. Combined with `--execute`, you can build generate → test workflows.
 
 ---
 
