@@ -79,21 +79,6 @@ def apply_with_morph(blocks, base_dir):
             errors.append(f"{path_hint}: path traversal detected - outside base_dir")
             continue
 
-        # Build the morphllm_edit_file tool call
-        tool_call = {
-            "jsonrpc": "2.0",
-            "id": str(uuid.uuid4()),
-            "method": "tools/call",
-            "params": {
-                "name": "morphllm_edit_file",
-                "arguments": {
-                    "file_path": validated_path,
-                    "code": block["code"],
-                    "language": block.get("language", ""),
-                }
-            }
-        }
-
         # Execute via claude mcp
         try:
             result = subprocess.run(
@@ -109,7 +94,7 @@ def apply_with_morph(blocks, base_dir):
                 applied += 1
             else:
                 errors.append(f"{path_hint}: {result.stderr}")
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             errors.append(f"{path_hint}: {e}")
 
     return {
@@ -197,8 +182,7 @@ def main():
     # Parse tools if provided
     tools = None
     if args.tools:
-        import json
-        with open(args.tools, 'r') as f:
+        with open(args.tools, 'r', encoding='utf-8') as f:
             tools = json.load(f)
 
     print(f"Calling Grok 4.20 (mode={args.mode}, 4 agents)...", file=sys.stderr)
@@ -254,7 +238,7 @@ def main():
     if args.output:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(raw_result)
+        output_path.write_text(raw_result, encoding='utf-8')
         print(f"Output written to {args.output}", file=sys.stderr)
 
     # Execute command if requested
