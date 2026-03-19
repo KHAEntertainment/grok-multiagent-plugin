@@ -192,7 +192,8 @@ ls ~/.openclaw/skills/grok-refactor/grok_bridge.py
 Grok Swarm resolves your API key in this order (highest to lowest priority):
 
 1. **Environment variables** — `OPENROUTER_API_KEY` or `OPENCLAW_OPENROUTER_DEFAULT_KEY`
-2. **OpenClaw auth profiles** — searched in order:
+2. **Local config file** — `~/.config/grok-swarm/config.json` with `{"api_key": "..."}`
+3. **OpenClaw auth profiles** — searched in order:
    - `~/.openclaw/agents/coder/agent/auth-profiles.json`
    - `~/.openclaw/agents/main/agent/auth-profiles.json`
    - `~/.openclaw/auth-profiles.json`
@@ -201,6 +202,9 @@ Grok Swarm resolves your API key in this order (highest to lowest priority):
 ```bash
 # Set via environment variable (highest priority):
 export OPENROUTER_API_KEY="sk-or-v1-xxx"
+
+# To use a lower-priority source instead, unset the env var:
+unset OPENROUTER_API_KEY
 ```
 
 **Get a key at:** https://openrouter.ai/keys
