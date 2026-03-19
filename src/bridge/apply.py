@@ -86,7 +86,7 @@ def infer_filename(block, base_dir):
 
 
 def apply_blocks(blocks, base_dir, dry_run=True):
-    base = Path(base_dir)
+    base = Path(base_dir).resolve()
     if not dry_run:
         base.mkdir(parents=True, exist_ok=True)
 
@@ -96,13 +96,17 @@ def apply_blocks(blocks, base_dir, dry_run=True):
 
     for block in blocks:
         filename = infer_filename(block, base_dir)
-        filepath = base / filename
+        filepath = (base / filename).resolve()
 
-        filepath = filepath.resolve()
-        if not str(filepath).startswith(str(base.resolve())):
+        # Validate containment using try/except instead of is_relative_to (Python 3.8 compat)
+        try:
+            rel = filepath.relative_to(base)
+            rel_path = str(rel)
+        except ValueError:
+            # Path is outside base_dir
             files_skipped += 1
             changes.append({
-                "path": str(filepath.relative_to(base)),
+                "path": str(filepath),
                 "action": "skipped",
                 "reason": "path outside base_dir"
             })
@@ -118,7 +122,7 @@ def apply_blocks(blocks, base_dir, dry_run=True):
             action = "written"
 
         changes.append({
-            "path": str(filepath.relative_to(base)) if filepath.is_relative_to(base) else str(filepath),
+            "path": rel_path,
             "action": action,
             "language": block.get("language", ""),
             "size": len(block["code"])

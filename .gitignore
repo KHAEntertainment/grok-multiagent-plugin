@@ -1,33 +1,7 @@
-# Python
+dist/
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+*.pyc
+*.egg-info/
 .venv/
 venv/
-ENV/
-env/
-.eggs/
-*.egg-info/
-dist/
-build/
-
-# Node
-node_modules/
-.npm
-*.log
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Project specific
-*.bak
-*.tmp
+*.egg

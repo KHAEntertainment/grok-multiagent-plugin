@@ -16,6 +16,7 @@ Give your OpenClaw agents access to a 4-agent swarm with ~2M token context for c
 - **Massive Context** — ~2M token window, handles entire codebases
 - **5 Modes** — Analyze, Refactor, Code, Reason, Orchestrate
 - **Tool Passthrough** — Pass OpenAI-format tool schemas for function calling
+- **File Writing** — Write annotated code blocks directly to disk
 - **Timeout Safety** — Process-level timeout enforcement prevents hangs
 =======
 You've been building with AI coding agents for a while now. They're great — they can write features, refactor modules, analyze codebases. But there's always been this ceiling. The models they run on are designed for single-turn conversations. They can collaborate with themselves behind the scenes to think through complex problems.
@@ -135,6 +136,48 @@ The `--apply` flag makes Grok write files to disk. Combined with `--execute`, yo
 
 ---
 
+## File Writing
+
+When `write_files=true`, Grok parses code blocks for filename annotations and writes them directly to disk, returning only a compact summary instead of the full response.
+
+### Supported Patterns
+
+**Fenced code blocks with path in the language tag:**
+```markdown
+```typescript:src/auth/login.ts
+export function login() { ... }
+```
+```
+
+**Fenced code blocks with `// FILE:` marker:**
+```markdown
+```typescript
+// FILE: src/auth/login.ts
+export function login() { ... }
+```
+```
+
+### Example
+
+```javascript
+const result = await tools.grok_swarm({
+  prompt: "Write a FastAPI auth module with JWT",
+  mode: "code",
+  write_files: true,
+  output_dir: "./src"
+});
+// Returns: "Wrote 3 files to ./src
+//   src/auth.py (1,234 bytes)
+//   src/jwt_utils.py (567 bytes)
+//   src/middleware.py (890 bytes)"
+```
+
+### Why This Matters
+
+Grok can generate ~350K token responses. Without file writing, that floods your orchestrator's context window. With file writing, you get a brief summary and the files on disk.
+
+---
+
 ## Requirements
 
 - OpenClaw v2026.3.0+
@@ -250,6 +293,8 @@ const result = await tools.grok_swarm({
 | `files` | string[] | No | — | Files for context |
 | `system` | string | No | — | Custom system prompt |
 | `timeout` | number | No | 120 | Timeout in seconds |
+| `write_files` | boolean | No | false | Write annotated code blocks to disk |
+| `output_dir` | string | No | ./grok-output/ | Directory for file writes |
 
 ---
 
@@ -260,18 +305,23 @@ const result = await tools.grok_swarm({
 ls ~/.openclaw/skills/grok-refactor/grok_bridge.py
 ```
 
-### "No OpenRouter API key"
-Configure your key in OpenClaw auth profiles:
+### OpenRouter API Key
+
+Grok Swarm resolves your API key in this order (highest to lowest priority):
+
+1. **Environment variables** — `OPENROUTER_API_KEY` or `XAI_API_KEY`
+2. **Local config file** — `~/.config/grok-swarm/config.json` with `{"api_key": "..."}`
+3. **OpenClaw auth profiles** — `~/.openclaw/agents/coder/agent/auth-profiles.json`
+
 ```bash
-# Add to ~/.openclaw/agents/coder/agent/auth-profiles.json
-{
-  "profiles": {
-    "openrouter:default": {
-      "key": "your-key-here"
-    }
-  }
-}
+# If you set an env var, it takes precedence over config files:
+export OPENROUTER_API_KEY="sk-or-v1-xxx"   # This overrides ~/.config/grok-swarm/config.json!
+
+# To use the local config file instead, unset the env var:
+unset OPENROUTER_API_KEY
 ```
+
+**Get a key at:** https://openrouter.ai/keys
 
 ### Timeout errors
 Increase timeout for large codebases:
