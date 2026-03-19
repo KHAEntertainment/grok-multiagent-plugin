@@ -28,6 +28,8 @@ function parseArgs() {
     tools: null,
     timeout: 120,
     output: null,
+    writeFiles: false,
+    outputDir: './grok-output/',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -55,6 +57,12 @@ function parseArgs() {
       case '--output':
         parsed.output = args[++i];
         break;
+      case '--write-files':
+        parsed.writeFiles = true;
+        break;
+      case '--output-dir':
+        parsed.outputDir = args[++i];
+        break;
       case '--help':
         console.log(`
 grok_swarm — Bridge to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm)
@@ -70,6 +78,8 @@ Options:
   --tools <path>      JSON file with OpenAI-format tool definitions
   --timeout <secs>    Timeout in seconds (default: 120)
   --output <path>     Output file (default: stdout)
+  --write-files       Parse response for annotated code blocks and write files
+  --output-dir <path> Directory for file writes (default: ./grok-output/)
   --help              Show this help
 
 Modes:
@@ -126,6 +136,14 @@ function run() {
 
   if (opts.output) {
     pyArgs.push('--output', opts.output);
+  }
+
+  if (opts.writeFiles) {
+    pyArgs.push('--write-files');
+  }
+
+  if (opts.outputDir && opts.outputDir !== './grok-output/') {
+    pyArgs.push('--output-dir', opts.outputDir);
   }
 
   // Spawn Python process

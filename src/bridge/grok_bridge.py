@@ -14,6 +14,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -146,6 +147,78 @@ def load_tools(tools_path):
     return tools
 
 
+def _safe_dest(output_path, file_path):
+    """
+    Resolve ``file_path`` relative to ``output_path`` and verify the result
+    stays inside ``output_path``.  Returns the resolved Path or raises
+    ValueError for unsafe paths (absolute, containing ``..``, etc.).
+    """
+    raw = Path(file_path)
+    if raw.is_absolute():
+        raise ValueError(f"Absolute paths are not allowed: {file_path!r}")
+    if ".." in raw.parts:
+        raise ValueError(f"Path traversal not allowed: {file_path!r}")
+    dest = (output_path / raw).resolve()
+    resolved_root = output_path.resolve()
+    try:
+        dest.relative_to(resolved_root)
+    except ValueError:
+        raise ValueError(f"Path escapes output directory: {file_path!r}")
+    return dest
+
+
+def parse_and_write_files(response_text, output_dir):
+    """
+    Scan response for fenced code blocks with filename annotations and write to disk.
+    
+    Supports patterns:
+      ```lang:path/to/file ... ```
+      ```lang
+      // FILE: path/to/file
+      ...
+      ```
+    
+    Returns list of (relative_path, byte_count) tuples written, where
+    byte_count is the number of UTF-8 bytes written.
+    """
+    written = []
+    output_path = Path(output_dir)
+    
+    # Pattern for lang:path at start of block (language tag contains path)
+    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
+    # Pattern for // FILE: or # FILE: markers
+    file_marker_pattern = re.compile(r'^\s*(?://|#)\s*FILE:\s*(.+?)\s*$', re.MULTILINE)
+    
+    def _write_file(file_path, content):
+        """Validate path, write content, and record result. Returns True on success."""
+        try:
+            dest = _safe_dest(output_path, file_path)
+        except ValueError as exc:
+            print(f"WARNING: Skipping unsafe path — {exc}", file=sys.stderr)
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        encoded = content.strip().encode("utf-8", errors="replace")
+        dest.write_bytes(encoded)
+        written.append((file_path, len(encoded)))
+        return True
+
+    # Split into code blocks by ``` fences
+    parts = re.split(r'```', response_text)
+    
+    for part in parts:
+        # Check for lang:path at start (language tag contains the path)
+        lang_match = lang_path_pattern.match(part)
+        if lang_match:
+            _write_file(lang_match.group(2), part[lang_match.end():])
+            continue
+        
+        # Check for // FILE: or # FILE: marker within the block
+        marker_match = file_marker_pattern.search(part)
+        if marker_match:
+            _write_file(marker_match.group(1).strip(), part[marker_match.end():])
+    
+    return written
+
 def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120):
     """Make the API call to Grok 4.20 Multi-Agent Beta."""
     api_key = get_api_key()
@@ -254,6 +327,10 @@ def main():
     parser.add_argument("--tools", help="Path to JSON file with OpenAI-format tool definitions")
     parser.add_argument("--timeout", type=int, default=120, help="Timeout in seconds (default: 120)")
     parser.add_argument("--output", help="Output file path (default: stdout)")
+    parser.add_argument("--write-files", action="store_true",
+                        help="Parse response for annotated code blocks and write to --output-dir")
+    parser.add_argument("--output-dir", default="./grok-output/",
+                        help="Directory for file writes (default: ./grok-output/)")
 
     args = parser.parse_args()
 
@@ -287,7 +364,22 @@ def main():
     if args.output:
         Path(args.output).write_text(result)
         print(f"Written to: {args.output}", file=sys.stderr)
-    else:
+
+    if args.write_files:
+        written = parse_and_write_files(result, args.output_dir)
+        if written:
+            total_bytes = sum(b for _, b in written)
+            print(f"Wrote {len(written)} files to {args.output_dir}")
+            for rel_path, byte_count in written:
+                print(f"  {rel_path} ({byte_count:,} bytes)")
+            print(f"Total: {total_bytes:,} bytes")
+        else:
+            print(
+                "No annotated files found in model response to write to disk.\n"
+                "Re-run without --write-files to see the full response.",
+                file=sys.stderr,
+            )
+    elif not args.output:
         print(result)
 
 

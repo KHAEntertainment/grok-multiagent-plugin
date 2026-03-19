@@ -51,6 +51,16 @@ const GrokSwarmSchema = Type.Object({
   timeout: Type.Optional(
     Type.Number({ description: "Timeout in seconds (default: 120)" }),
   ),
+  write_files: Type.Optional(
+    Type.Boolean({
+      description: "Write generated files directly to disk; orchestrator receives a brief summary only",
+    }),
+  ),
+  output_dir: Type.Optional(
+    Type.String({
+      description: "Directory to write files into (default: ./grok-output/)",
+    }),
+  ),
 });
 
 export default function (api: any) {
@@ -62,7 +72,8 @@ export default function (api: any) {
         "Delegate tasks to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm with 2M context). " +
         "Use for codebase analysis, refactoring, code generation, or complex reasoning. " +
         "Modes: refactor, analyze, code, reason, orchestrate. " +
-        "Orchestrate mode requires a custom system prompt.",
+        "With write_files=true, annotated code blocks are written directly to disk and a " +
+        "compact summary is returned instead of the full response.",
       parameters: GrokSwarmSchema,
       async execute(_toolCallId: string, params: any) {
         const json = (payload: unknown) => ({
@@ -106,6 +117,16 @@ export default function (api: any) {
 
           if (params.system) {
             args.push("--system", params.system);
+          }
+
+          if (params.write_files) {
+            args.push("--write-files");
+          }
+
+          if (params.output_dir) {
+            args.push("--output-dir", params.output_dir);
+          } else if (api.config?.defaultOutputDir) {
+            args.push("--output-dir", api.config.defaultOutputDir);
           }
 
           // Spawn Python bridge with timeout enforcement

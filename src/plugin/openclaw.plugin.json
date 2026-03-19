@@ -18,6 +18,10 @@
       "bridgeScript": {
         "type": "string",
         "description": "Path to grok_bridge.py script"
+      },
+      "defaultOutputDir": {
+        "type": "string",
+        "description": "Default output directory for file writes (default: ./grok-output/)"
       }
     }
   }
