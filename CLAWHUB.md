@@ -1,48 +1,78 @@
-# ClawHub Publication Metadata
+# Grok Swarm Tool — ClawHub Publication
 
-## Package Information
+## Package
 
 | Field | Value |
 |-------|-------|
-| **Name** | `@openclaw/grok-swarm` |
+| **Name** | `grok-swarm` |
 | **Version** | `1.0.0` |
-| **Plugin ID** | `grok-swarm` |
 | **Min OpenClaw** | `2026.3.0` |
-
-## Description
-
-Bridge to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm) for OpenClaw agents. Enables powerful multi-agent reasoning, codebase analysis, refactoring, and code generation with ~2M token context.
 
 ## Installation
 
 ```bash
-openclaw skill install grok-swarm
-# or
+# Option 1: Via ClawHub
 clawhub install grok-swarm
+
+# Option 2: Via install script
+git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
+cd grok-multiagent-plugin
+./install.sh
+
+# Option 3: Manual
+cp -r src/bridge ~/.openclaw/skills/grok-refactor/
+cp -r src/plugin ~/.openclaw/extensions/grok-swarm/
+```
+
+## Configuration
+
+### 1. Add to plugins.allow
+```json
+"plugins": {
+  "allow": ["grok-swarm"]
+}
+```
+
+### 2. Enable plugin
+```json
+"plugins": {
+  "entries": {
+    "grok-swarm": {
+      "enabled": true
+    }
+  }
+}
+```
+
+### 3. Grant tool access to agents
+```json
+"agents": {
+  "list": [{
+    "id": "coder",
+    "tools": {
+      "allow": ["grok_swarm"]
+    }
+  }]
+}
+```
+
+### 4. Set OpenRouter API key
+
+In `~/.openclaw/agents/coder/agent/auth-profiles.json`:
+```json
+{
+  "profiles": {
+    "openrouter:default": {
+      "key": "sk-or-v1-..."
+    }
+  }
+}
 ```
 
 ## Dependencies
 
-### Runtime
-
-| Dependency | Version | Source |
-|------------|---------|--------|
-| Python 3 | ≥3.8 | System |
-| `openai` Python package | ≥2.28.0 | PyPI |
-
-### Configuration
-
-- OpenRouter API key with Grok 4.20 access
-- Configured in OpenClaw auth profiles
-
-## Files
-
-| Path | Purpose |
-|------|---------|
-| `src/bridge/grok_bridge.py` | Python API bridge |
-| `src/bridge/index.js` | Node.js wrapper |
-| `src/plugin/index.ts` | OpenClaw plugin |
-| `src/plugin/openclaw.plugin.json` | Plugin manifest |
+- Python 3.8+ with `openai>=2.28.0`
+- Node.js 18+
 
 ## Categories
 
@@ -50,47 +80,9 @@ clawhub install grok-swarm
 - `coding`
 - `analysis`
 - `refactoring`
-- `grok`
-- `multi-agent`
 
 ## Keywords
 
 ```
-openclaw grok multi-agent ai coding analysis refactoring
-xai openrouter code-review security-audit architecture
+openclaw grok multi-agent xai openrouter code-review security
 ```
-
-## Author
-
-OpenClaw Community
-
-## License
-
-MIT
-
-## Platform
-
-- Linux ✓
-- macOS ✓
-- Windows (via WSL) ✓
-
-## Changelog
-
-See [CHANGELOG.md](CHANGELOG.md)
-
-## Support
-
-- Issues: https://github.com/KHAEntertainment/openclaw-grok-swarm/issues
-- Discord: https://discord.com/invite/clawd
-
-## Publish Checklist
-
-- [x] Plugin manifest (`openclaw.plugin.json`) complete
-- [x] Package.json for npm publishing
-- [x] README with installation and usage
-- [x] Python bridge with OpenAI SDK
-- [x] Node.js timeout wrapper
-- [x] Test results documented
-- [ ] GitHub repository created
-- [ ] npm package published
-- [ ] ClawHub listing reviewed
