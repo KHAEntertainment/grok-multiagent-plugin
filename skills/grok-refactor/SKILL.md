@@ -1,53 +1,77 @@
-# Grok Refactor Skill
+# Grok Swarm
 
-**Expert code refactoring powered by Grok 4.20 Multi-Agent Beta**
+**Multi-agent intelligence powered by Grok 4.20 Multi-Agent Beta**
 
 - **Version:** 1.0.0
 - **Platforms:** OpenClaw, Claude Code
-- **Mode:** `refactor`
+- **Modes:** analyze, refactor, code, reason, orchestrate
 
 ---
 
-## Description
+## Overview
 
-Uses Grok 4.20's 4-agent swarm to intelligently refactor code while:
-- Preserving original behavior and intent
-- Improving readability and maintainability
-- Adding modern patterns (async/await, type hints, etc.)
-- Explaining what changed and why
+Give your AI coding agent access to a 4-agent swarm with ~2M token context. Grok 4.20 coordinates multiple agents to analyze codebases, refactor modules, generate features, and reason through complex problems.
+
+## Features
+
+- **4-Agent Coordination** — Orchestrator + specialists + critics working together
+- **Massive Context** — ~2M token window, handles entire codebases
+- **5 Task Modes** — Analyze, Refactor, Code, Reason, Orchestrate
+- **File Writing** — Write annotated code blocks directly to disk
+- **Tool Passthrough** — Pass OpenAI-format tool schemas for function calling
 
 ## Usage
 
-```bash
-# Via grok-swarm CLI
-grok-swarm refactor --prompt "Improve this code" --files src/app.py
-
-# Via Python
-python3 -m bridge.cli refactor --prompt "Add type hints" --files utils.py
-```
-
-## OpenClaw Integration
-
-In OpenClaw, this skill is automatically available via the `grok_swarm` tool:
+### OpenClaw
 
 ```javascript
 tools.grok_swarm({
-  prompt: "Refactor this module for better maintainability",
-  mode: "refactor",
-  files: ["src/module.py"]
-})
+  prompt: "Analyze the security of this auth module",
+  mode: "analyze",
+  files: ["src/auth/*.ts"],
+  write_files: true,
+  output_dir: "./grok-output/"
+});
 ```
 
-## Claude Code Integration
-
-In Claude Code, use the skill directly:
+### Claude Code
 
 ```
-/grok-swarm:refactor Convert this callback pattern to async/await
+/grok-swarm:analyze Review the security of my auth module
+/grok-swarm:refactor Convert this to async/await
+/grok-swarm:code Write a FastAPI endpoint for user registration
+/grok-swarm:reason Compare microservices vs monolith
 ```
+
+### CLI
+
+```bash
+node bridge/index.js --mode analyze --prompt "Find security issues" --files src/*.ts
+```
+
+## Task Modes
+
+| Mode | Description |
+|------|-------------|
+| `analyze` | Security audits, architecture review, bug finding |
+| `refactor` | Modernization, migration, cleanup |
+| `code` | Feature generation, tests, boilerplate |
+| `reason` | Multi-perspective reasoning, research |
+| `orchestrate` | Custom agent handoff |
 
 ## Requirements
 
 - Python 3.8+
+- Node.js 18+
 - `openai>=1.0.0`
 - OpenRouter API key with Grok 4.20 access
+
+## API Key Setup
+
+```bash
+# Environment variable
+export OPENROUTER_API_KEY=sk-or-v1-...
+
+# Or configure in ~/.config/grok-swarm/config.json
+echo '{"api_key": "sk-or-v1-..."}' > ~/.config/grok-swarm/config.json
+```
