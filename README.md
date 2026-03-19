@@ -20,9 +20,49 @@ Grok 4.20 is groundbreaking, but it doesn't play nicely with current coding tool
 
 **The Solution:**
 
-This plugin bridges the gap. It makes Grok 4.20 available as a tool that any agent in Claude Code or OpenClaw can call. No core modifications, no hacking — just install and go.
+This plugin bridges that gap. It makes Grok 4.20 available as a tool that any agent in Claude Code or OpenClaw can call. No core modifications, no hacking — just install and go.
 
 Now when your agent needs deep codebase analysis, large-scale refactoring, or complex reasoning, it can delegate to Grok's swarm and get back the kind of coordinated, multi-perspective thinking that single models can't deliver.
+
+---
+
+## Known Limitations
+
+> **Important:** Grok currently operates as a **powerful consultant** — it reads your codebase, coordinates 4 agents to analyze it, and returns detailed results. However, it doesn't write files or execute code directly.
+
+### Why This Matters
+
+Grok can hold ~1.5M tokens of context and generate ~350K token responses. If that entire response floods back through your orchestrator's context window, you've just wasted precious tokens and slowed down your agent.
+
+```
+Current Flow:
+Files (1.5M tokens) → Grok → Full response (376K) → Orchestrator (flooded!)
+
+Ideal Flow:
+Files (1.5M tokens) → Grok → Writes files + brief summary → Orchestrator (clean)
+```
+
+### Current Use Cases
+
+For now, Grok Swarm works best for:
+- ✅ **Codebase analysis** — Security audits, architecture reviews
+- ✅ **Refactoring guidance** — Get suggestions, apply them yourself
+- ✅ **Code generation** — Generate new features, paste into your codebase
+- ✅ **Complex reasoning** — Research synthesis, decision making
+
+### Future Enhancement
+
+The ideal architecture would be:
+1. Grok writes modified files directly to disk
+2. Grok returns only a brief summary to orchestrator
+3. Orchestrator gets clean context + written files
+
+This requires a **capability system** in OpenClaw where:
+- Core defines contracts like `FileSystemOperation` or `CodeExecution`
+- Grok plugin implements those contracts
+- Orchestrator gets summaries, not full outputs
+
+**See [GitHub Issue #1](https://github.com/KHAEntertainment/grok-multiagent-plugin/issues/1) for the feature request.**
 
 ---
 
@@ -33,8 +73,15 @@ Now when your agent needs deep codebase analysis, large-scale refactoring, or co
 | **4-Agent Coordination** | Multiple perspectives on every request |
 | **2M Token Context** | Holds entire codebases without truncation |
 | **5 Task Modes** | Analyze, Refactor, Generate, Reason, Orchestrate |
-| **Dual Platform** | Works in Claude Code AND OpenClaw |
+| **Dual Platform** | Works in both Claude Code and OpenClaw |
 | **Zero Core Changes** | Drop-in tool, no platform modifications |
+
+---
+
+## Requirements
+
+- Python 3.8+
+- OpenRouter API key with Grok 4.20 access
 
 ---
 
@@ -43,7 +90,7 @@ Now when your agent needs deep codebase analysis, large-scale refactoring, or co
 ### For Claude Code
 
 ```bash
-# 1. Clone the repo
+# 1. Clone repo
 git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
 cd grok-multiagent-plugin
 
@@ -67,7 +114,7 @@ Then use it directly:
 ### For OpenClaw
 
 ```bash
-# 1. Clone the repo
+# 1. Clone repo
 git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
 cd grok-multiagent-plugin
 
@@ -92,21 +139,13 @@ const result = await tools.grok_swarm({
 
 ## Task Modes
 
-| Mode | What It Does | When To Use |
-|------|-------------|-------------|
-| `analyze` | Deep code review, security audit, architecture analysis | Before shipping code, when reviewing PRs, assessing tech debt |
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `analyze` | Deep code review, security audit, architecture assessment | Security reviews, PR reviews, tech debt assessment |
 | `refactor` | Improve code quality while preserving behavior | Modernization, migration, cleanup of legacy code |
 | `code` | Generate clean, production-ready code | Building features, writing tests, boilerplate |
-| `reason` | Complex multi-perspective reasoning | Research synthesis, decision making, trade-off analysis |
-| `orchestrate` | Custom agent handoff with your system prompt | When you need full control over the swarm's behavior |
-
----
-
-## Requirements
-
-- Python 3.8+
-- An OpenRouter API key with Grok 4.20 access
-  - Get your key at: https://openrouter.ai/keys
+| `reason` | Collaborative multi-perspective reasoning | Research synthesis, decision making, trade-off analysis |
+| `orchestrate` | Custom agent handoff with your system prompt | When you need full control over swarm's behavior |
 
 ---
 
@@ -120,7 +159,7 @@ Claude Code doesn't have built-in secret management, so we use a simple file-bas
 ./scripts/setup.sh
 ```
 
-Your API key is stored in `~/.config/grok-swarm/config.json` with mode 600 — readable only by you. Never exposed to the platform, just loaded at runtime.
+API key is stored in `~/.config/grok-swarm/config.json` with mode 600 — readable only by you. Never exposed to the platform, just loaded at runtime.
 
 ### OpenClaw Setup
 
