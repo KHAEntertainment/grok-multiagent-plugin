@@ -6,6 +6,7 @@ Dispatches to refactor/analyze/code/reason modes using grok_bridge.py logic.
 Supports file writing when Grok generates code:
     --output-dir <path>  Directory to write files to
     --apply              Actually write files (dry-run by default)
+    --execute <cmd>      Run a command after generation
     --use-morph          Use Morph LLM MCP for file edits if available
 """
 
@@ -78,7 +79,7 @@ def apply_with_morph(blocks, base_dir):
             errors.append(f"{path_hint}: path traversal detected - outside base_dir")
             continue
 
-        # Execute via claude mcp (using list form for security)
+        # Execute via claude mcp
         try:
             result = subprocess.run(
                 ["claude", "mcp", "call", "morphllm", "edit_file",
@@ -152,6 +153,8 @@ def main():
                         help="Directory to write generated files (used with --apply)")
     parser.add_argument("--apply", "-a", action="store_true",
                         help="Actually write files from code blocks (dry-run by default)")
+    parser.add_argument("--execute", "-e", metavar="CMD",
+                        help="Execute command after generation (shell string)")
     parser.add_argument("--use-morph", action="store_true",
                         help="Use Morph LLM MCP for file edits if available")
 
@@ -238,8 +241,26 @@ def main():
         output_path.write_text(raw_result, encoding='utf-8')
         print(f"Output written to {args.output}", file=sys.stderr)
 
+    # Execute command if requested
+    if args.execute:
+        print(f"\nExecuting: {args.execute}", file=sys.stderr)
+        exec_result = subprocess.run(
+            args.execute,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if exec_result.stdout:
+            print(exec_result.stdout)
+        if exec_result.stderr:
+            print(exec_result.stderr, file=sys.stderr)
+        if exec_result.returncode != 0:
+            print(f"Command exited with code {exec_result.returncode}", file=sys.stderr)
+            sys.exit(exec_result.returncode)
+
     # Output the normalized response to stdout (unless we wrote files and nothing else)
-    if not args.output:
+    if not args.output and not args.execute:
         print(normalized_result)
 
     print(f"\nCompleted in {elapsed:.1f}s", file=sys.stderr)
