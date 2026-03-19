@@ -1,6 +1,8 @@
 # Grok Swarm
 
-Multi-agent intelligence powered by Grok 4.20 Multi-Agent Beta. Give any AI coding agent access to a 4-agent swarm with ~2M token context for code analysis, refactoring, generation, and complex reasoning.
+**Multi-agent intelligence powered by Grok 4.20 Multi-Agent Beta**
+
+Give any AI coding agent access to a 4-agent swarm with ~2M token context for code analysis, refactoring, generation, and complex reasoning.
 
 - **Version:** 1.0.3
 - **Platforms:** OpenClaw, Claude Code
@@ -18,8 +20,8 @@ Grok 4.20 coordinates 4 agents (orchestrator + specialists + critics) to:
 
 ## Features
 
-- **4-Agent Coordination** — Multi-perspective reasoning on every request
-- **Massive Context** — ~2M token window, handles entire codebases
+- **4-Agent Coordination** — Multi-perspective reasoning
+- **Massive Context** — ~2M token window
 - **File Writing** — Write annotated code blocks directly to disk
 - **Tool Passthrough** — Use OpenAI-format tools with Grok
 
@@ -31,9 +33,7 @@ Grok 4.20 coordinates 4 agents (orchestrator + specialists + critics) to:
 tools.grok_swarm({
   prompt: "Analyze security of this auth module",
   mode: "analyze",
-  files: ["src/auth/*.ts"],
-  write_files: true,
-  output_dir: "./grok-output/"
+  files: ["src/auth/*.ts"]
 });
 ```
 
@@ -43,12 +43,6 @@ tools.grok_swarm({
 /grok-swarm:analyze Review auth module security
 /grok-swarm:refactor Convert to async/await
 /grok-swarm:code Write FastAPI endpoint
-```
-
-### CLI
-
-```bash
-node bridge/index.js --mode analyze --prompt "Find bugs" --files src/*.ts
 ```
 
 ## Task Modes
@@ -68,35 +62,21 @@ node bridge/index.js --mode analyze --prompt "Find bugs" --files src/*.ts
 - `openai>=1.0.0`
 - OpenRouter API key with Grok 4.20 access
 
-## API Key Configuration
+## API Key
 
-The skill searches for your API key in this order:
-
-1. `OPENROUTER_API_KEY` or `XAI_API_KEY` environment variable
-2. `~/.config/grok-swarm/config.json` with `{"api_key": "..."}`
-3. OpenClaw auth profiles at `~/.openclaw/*/auth-profiles.json`
-
-**Recommended:** Set `OPENROUTER_API_KEY` or use `~/.config/grok-swarm/config.json`.
-
-## Security Notes
-
-### File Writing
-
-By default, `--write-files` is a dry-run. To actually write files:
+Set your API key:
 
 ```bash
---write-files --apply
+export OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
-Review generated files before using in production.
+Or create `~/.config/grok-swarm/config.json`:
 
-### Shell Execution
-
-The `--execute` option runs arbitrary shell commands. **Use with caution** — never run generated commands without reviewing them first.
-
-### API Key Access
-
-The skill reads from multiple config locations to find your API key. Ensure you're comfortable with it reading `~/.openclaw/*/auth-profiles.json` for existing OpenRouter keys.
+```bash
+mkdir -p ~/.config/grok-swarm
+echo '{"api_key": "sk-or-v1-..."}' > ~/.config/grok-swarm/config.json
+chmod 600 ~/.config/grok-swarm/config.json
+```
 
 ## Installation
 
