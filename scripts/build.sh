@@ -1,9 +1,11 @@
 #!/bin/bash
 set -e
 
-VERSION=$(cat VERSION)
+# Resolve project root (parent of scripts/)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DIST_DIR="$SCRIPT_DIR/dist"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VERSION=$(cat "$PROJECT_DIR/VERSION")
+DIST_DIR="$PROJECT_DIR/dist"
 
 log() { echo -e "[+] $1"; }
 error() { echo -e "[✗] $1" >&2; }
@@ -21,25 +23,25 @@ mkdir -p "$DIST_DIR/openclaw" "$DIST_DIR/claude"
 log "Building for OpenClaw + Claude Code..."
 
 # Copy bridge to both
-cp -r src/bridge "$DIST_DIR/openclaw/bridge"
-cp -r src/bridge "$DIST_DIR/claude/bridge"
+cp -r "$PROJECT_DIR/src/bridge" "$DIST_DIR/openclaw/bridge"
+cp -r "$PROJECT_DIR/src/bridge" "$DIST_DIR/claude/bridge"
 
 # Copy OpenClaw plugin
-cp -r src/plugin "$DIST_DIR/openclaw/plugin"
+cp -r "$PROJECT_DIR/src/plugin" "$DIST_DIR/openclaw/plugin"
 
 # Copy Claude plugin
-cp -r platforms/claude/.claude-plugin "$DIST_DIR/claude/"
-cp -r platforms/claude/skills "$DIST_DIR/claude/"
+cp -r "$PROJECT_DIR/platforms/claude/.claude-plugin" "$DIST_DIR/claude/"
+cp -r "$PROJECT_DIR/platforms/claude/skills" "$DIST_DIR/claude/"
 
 # Copy shared skill
 mkdir -p "$DIST_DIR/openclaw/skills"
-cp -r skills/grok-refactor "$DIST_DIR/openclaw/skills/"
+cp -r "$PROJECT_DIR/skills/grok-refactor" "$DIST_DIR/openclaw/skills/"
 
 # Version substitution
 find "$DIST_DIR" -type f \( -name "*.json" -o -name "*.md" -o -name "*.toml" \) -exec sed -i "s/1\.0\.0/$VERSION/g" {} \; 2>/dev/null || true
 
 # Make scripts executable
-chmod +x "$DIST_DIR/openclaw/bridge/"*.sh 2>/dev/null || true
+chmod +x "$DIST_DIR/openclaw/bridge/"*.py 2>/dev/null || true
 chmod +x "$DIST_DIR/claude/bridge/"*.py 2>/dev/null || true
 
 log "Build complete!"

@@ -2,8 +2,9 @@
 # install.sh — Install Grok Swarm for OpenClaw and/or Claude Code
 set -e
 
-VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+VERSION=$(cat "$PROJECT_DIR/VERSION" 2>/dev/null || echo "1.0.0")
 TARGET="${1:-both}"
 
 RED='\033[0;31m'
@@ -25,21 +26,21 @@ usage() {
 install_openclaw() {
     log "Installing Grok Swarm for OpenClaw..."
 
+    # Run build if dist doesn't exist
+    if [ ! -d "$PROJECT_DIR/dist/openclaw" ]; then
+        warn "dist/ not found. Running build.sh first..."
+        "$SCRIPT_DIR/build.sh"
+    fi
+
     # Create directories
     mkdir -p ~/.openclaw/extensions/grok-swarm
     mkdir -p ~/.openclaw/skills/grok-refactor
 
-    # Run build if dist doesn't exist
-    if [ ! -d "$SCRIPT_DIR/dist/openclaw" ]; then
-        warn "dist/ not found. Running build.sh first..."
-        "$SCRIPT_DIR/scripts/build.sh"
-    fi
-
     # Copy plugin
-    cp -r "$SCRIPT_DIR/dist/openclaw/plugin/"* ~/.openclaw/extensions/grok-swarm/ 2>/dev/null || true
+    cp -r "$PROJECT_DIR/dist/openclaw/plugin/"* ~/.openclaw/extensions/grok-swarm/
 
     # Copy skill
-    cp -r "$SCRIPT_DIR/dist/openclaw/bridge/"* ~/.openclaw/skills/grok-refactor/
+    cp -r "$PROJECT_DIR/dist/openclaw/bridge/"* ~/.openclaw/skills/grok-refactor/
 
     # Set up Python venv
     if command -v python3 &> /dev/null; then
@@ -57,17 +58,17 @@ install_claude() {
     mkdir -p ~/.claude/plugins
 
     # Run build if dist doesn't exist
-    if [ ! -d "$SCRIPT_DIR/dist/claude" ]; then
+    if [ ! -d "$PROJECT_DIR/dist/claude" ]; then
         warn "dist/ not found. Running build.sh first..."
-        "$SCRIPT_DIR/scripts/build.sh"
+        "$SCRIPT_DIR/build.sh"
     fi
 
     # Copy plugin
-    cp -r "$SCRIPT_DIR/dist/claude" ~/.claude/plugins/grok-swarm
+    cp -r "$PROJECT_DIR/dist/claude" ~/.claude/plugins/grok-swarm
 
     # Install CLI
-    if [ -f "$SCRIPT_DIR/pyproject.toml" ]; then
-        pip install -e "$SCRIPT_DIR" 2>/dev/null || warn "Could not pip install. Run: pip install -e $SCRIPT_DIR"
+    if [ -f "$PROJECT_DIR/pyproject.toml" ]; then
+        pip install -e "$PROJECT_DIR" 2>/dev/null || warn "Could not pip install. Run: pip install -e $PROJECT_DIR"
     fi
 
     log "Claude Code installation complete!"
