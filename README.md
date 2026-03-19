@@ -1,11 +1,30 @@
 # Grok Swarm Tool
 
-**Bridge to xAI Grok 4.20 Multi-Agent Beta for OpenClaw**
+**Dual-Platform: OpenClaw + Claude Code**
 
-Give your OpenClaw agents access to a 4-agent swarm with ~2M token context for code analysis, refactoring, and reasoning.
+Give any AI coding agent access to Grok 4.20's 4-agent swarm with ~2M token context.
 
-[![OpenClaw](https://img.shields.io/badge/OpenClaw-v2026.3.0+-blue)](https://docs.openclaw.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
+
+## The Story
+
+You've been building with AI coding agents for a while now. They're great — they can write features, refactor modules, analyze codebases. But there's always been this ceiling. The models they run on are designed for single-turn conversations.
+
+**Enter Grok 4.20 Multi-Agent Beta.**
+
+It's different. Instead of one model responding, it's *four agents coordinating* in real-time. An orchestrator, specialists, critics — all working together to break down your request and reason through it from multiple angles. It can hold ~2M tokens of context — that's entire codebases in a single request.
+
+**The Problem:**
+
+Grok 4.20 is groundbreaking, but it doesn't play nicely with current coding tools. Claude Code doesn't have a Grok integration. OpenClaw's tooling system doesn't support multi-agent swarms. If you wanted to use Grok, you'd have to hack together custom scripts or modify your platform's core components. Not ideal.
+
+**The Solution:**
+
+This plugin bridges that gap. It makes Grok 4.20 available as a tool that any agent in Claude Code or OpenClaw can call. No core modifications, no hacking — just install and go.
+
+Now when your agent needs deep codebase analysis, large-scale refactoring, or complex reasoning, it can delegate to Grok's swarm and get back the kind of coordinated, multi-perspective thinking that single models can't deliver.
 
 ---
 
@@ -16,7 +35,7 @@ Give your OpenClaw agents access to a 4-agent swarm with ~2M token context for c
 - **5 Modes** — Analyze, Refactor, Code, Reason, Orchestrate
 - **Tool Passthrough** — Pass OpenAI-format tool schemas for function calling
 - **File Writing** — Write annotated code blocks directly to disk
-- **Timeout Safety** — Process-level timeout enforcement prevents hangs
+- **Dual Platform** — Works with both Claude Code and OpenClaw
 
 ---
 
@@ -62,7 +81,7 @@ Grok can generate ~350K token responses. Without file writing, that floods your 
 
 ## Requirements
 
-- OpenClaw v2026.3.0+
+- OpenClaw v2026.3.0+ (for OpenClaw integration)
 - Python 3.8+
 - Node.js 18+
 - OpenRouter API key with Grok 4.20 access
@@ -71,15 +90,40 @@ Grok can generate ~350K token responses. Without file writing, that floods your 
 
 ## Quick Start
 
-### 1. Clone & Install
+### For Claude Code
 
 ```bash
+# 1. Clone the repo
 git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
 cd grok-multiagent-plugin
-./install.sh
+
+# 2. Install for Claude Code
+./scripts/install.sh claude
+
+# 3. Set up your API key
+./scripts/setup.sh
+# Paste your OpenRouter API key (get one at https://openrouter.ai/keys)
 ```
 
-### 2. Configure OpenClaw
+Then use it directly:
+
+```
+/grok-swarm:analyze Review the security of my auth module
+/grok-swarm:refactor Convert these callbacks to async/await
+/grok-swarm:code Write a FastAPI endpoint for user registration
+/grok-swarm:reason Compare microservices vs monolith for this project
+```
+
+### For OpenClaw
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
+cd grok-multiagent-plugin
+
+# 2. Install for OpenClaw
+./scripts/install.sh openclaw
+```
 
 Add to your `openclaw.json`:
 
@@ -104,13 +148,13 @@ Add to your `openclaw.json`:
 }
 ```
 
-### 3. Restart Gateway
+Restart gateway:
 
 ```bash
 openclaw gateway restart
 ```
 
-### 4. Verify
+Verify:
 
 ```bash
 openclaw status | grep grok
@@ -120,28 +164,16 @@ openclaw status | grep grok
 
 ## Usage
 
-### From CLI
+### Claude Code
 
-```bash
-# Analyze code
-node ~/.openclaw/skills/grok-refactor/index.js \
-  --mode analyze \
-  --prompt "Find security vulnerabilities" \
-  --files src/auth/*.ts
-
-# Refactor code
-node ~/.openclaw/skills/grok-refactor/index.js \
-  --mode refactor \
-  --prompt "Convert callbacks to async/await" \
-  --files src/legacy/*.js
-
-# Generate code
-node ~/.openclaw/skills/grok-refactor/index.js \
-  --mode code \
-  --prompt "Write a rate limiter middleware"
+```
+/grok-swarm:analyze Review the security of my auth module
+/grok-swarm:refactor Convert this to async/await
+/grok-swarm:code Write a FastAPI user registration endpoint
+/grok-swarm:reason Compare these two architectural approaches
 ```
 
-### From OpenClaw Agent
+### OpenClaw
 
 ```javascript
 const result = await tools.grok_swarm({
@@ -156,13 +188,13 @@ const result = await tools.grok_swarm({
 
 ## Modes
 
-| Mode | Description |
-|------|-------------|
-| `analyze` | Code review, security audit, architecture assessment |
-| `refactor` | Large-scale refactoring, modernization, migration |
-| `code` | Generate new code, features, tests |
-| `reason` | Complex reasoning, research synthesis |
-| `orchestrate` | Custom agent handoff (requires `--system`) |
+| Mode | Description | Use Case |
+|------|-------------|----------|
+| `analyze` | Deep code review, security audit, architecture assessment | Security reviews, PR reviews, tech debt assessment |
+| `refactor` | Improve code quality while preserving behavior | Modernization, migration, cleanup of legacy code |
+| `code` | Generate clean, production-ready code | Building features, writing tests, boilerplate |
+| `reason` | Collaborative multi-perspective reasoning | Research synthesis, decision making, trade-off analysis |
+| `orchestrate` | Custom agent handoff with your system prompt | When you need full control over swarm's behavior |
 
 ---
 
@@ -180,39 +212,38 @@ const result = await tools.grok_swarm({
 
 ---
 
-## Troubleshooting
-
-### "Bridge script not found"
-```bash
-ls ~/.openclaw/skills/grok-refactor/grok_bridge.py
-```
-
-### OpenRouter API Key
+## OpenRouter API Key
 
 Grok Swarm resolves your API key in this order (highest to lowest priority):
 
-1. **Environment variables** — `OPENROUTER_API_KEY` or `OPENCLAW_OPENROUTER_DEFAULT_KEY`
+1. **Environment variables** — `OPENROUTER_API_KEY` or `XAI_API_KEY`
 2. **Local config file** — `~/.config/grok-swarm/config.json` with `{"api_key": "..."}`
-3. **OpenClaw auth profiles** — searched in order:
-   - `~/.openclaw/agents/coder/agent/auth-profiles.json`
-   - `~/.openclaw/agents/main/agent/auth-profiles.json`
-   - `~/.openclaw/auth-profiles.json`
-   - `~/.config/openclaw/auth-profiles.json`
+3. **OpenClaw auth profiles** — `~/.openclaw/agents/coder/agent/auth-profiles.json`
 
 ```bash
-# Set via environment variable (highest priority):
-export OPENROUTER_API_KEY="sk-or-v1-xxx"
+# If you set an env var, it takes precedence over config files:
+export OPENROUTER_API_KEY="sk-or-v1-xxx"   # This overrides ~/.config/grok-swarm/config.json!
 
-# To use a lower-priority source instead, unset the env var:
+# To use the local config file instead, unset the env var:
 unset OPENROUTER_API_KEY
 ```
 
 **Get a key at:** https://openrouter.ai/keys
 
-### Timeout errors
-Increase timeout for large codebases:
+---
+
+## Morph LLM Integration
+
+For **partial file edits** (not full replacement), use the `--use-morph` flag:
+
 ```bash
-node index.js --timeout 300 ...
+grok-swarm refactor --prompt "Convert this function to async" --use-morph --apply
+```
+
+This requires Morph LLM MCP installed:
+
+```bash
+claude mcp add morphllm
 ```
 
 ---
@@ -220,24 +251,24 @@ node index.js --timeout 300 ...
 ## Architecture
 
 ```
-OpenClaw Agent
-      │
-      ▼
-grok_swarm tool
-      │
-      ▼
+OpenClaw Agent / Claude Code
+         │
+         ▼
+grok_swarm tool / skill
+         │
+         ▼
 index.js (Node wrapper)
-      │
-      ▼
+         │
+         ▼
 grok_bridge.py (Python/OpenAI SDK)
-      │
-      ▼
+         │
+         ▼
 OpenRouter API
-      │
-      ▼
+         │
+         ▼
 xAI Grok 4.20 Multi-Agent Beta
-      │
-      ▼
+         │
+         ▼
 Response
 ```
 
