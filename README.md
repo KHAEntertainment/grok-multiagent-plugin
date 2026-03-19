@@ -228,7 +228,7 @@ grok-multiagent-plugin/
 │   └── claude/              # Claude Code plugin
 ├── scripts/
 │   ├── build.sh             # Build for both platforms
-│   ├── install.sh           # Install with --openclaw/--claude/--both
+│   ├── install.sh           # Install using positional args: openclaw | claude | both
 │   └── setup.sh             # API key configuration (Claude Code)
 ├── dist/                     # Generated artifacts (gitignored)
 └── VERSION
