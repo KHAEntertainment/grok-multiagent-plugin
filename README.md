@@ -34,7 +34,7 @@ Now when your agent needs deep codebase analysis, large-scale refactoring, or co
 
 Grok can hold ~1.5M tokens of context and generate ~350K token responses. If that entire response floods back through your orchestrator's context window, you've just wasted precious tokens and slowed down your agent.
 
-```
+```text
 Current Flow:
 Files (1.5M tokens) → Grok → Full response (376K) → Orchestrator (flooded!)
 
@@ -104,7 +104,7 @@ cd grok-multiagent-plugin
 
 Then use it directly:
 
-```
+```bash
 /grok-swarm:analyze Review the security of my auth module
 /grok-swarm:refactor Convert these callbacks to async/await patterns
 /grok-swarm:code Write a FastAPI endpoint for user registration
@@ -196,7 +196,7 @@ OpenClaw has built-in secret management via auth profiles:
 
 ### Codebase Security Audit
 
-```
+```bash
 /grok-swarm:analyze Review the security of my auth module
 ```
 
@@ -204,7 +204,7 @@ Grok's swarm breaks down the request: one agent focuses on authentication flows,
 
 ### Legacy Code Modernization
 
-```
+```bash
 /grok-swarm:refactor Modernize this legacy module while preserving behavior
 ```
 
@@ -212,7 +212,7 @@ The swarm identifies patterns that can be improved, suggests modern alternatives
 
 ### Architectural Decision Making
 
-```
+```bash
 /grok-swarm:reason Should we switch from REST to GraphQL for this API?
 ```
 
@@ -222,7 +222,7 @@ Agents debate from multiple perspectives — one argues for GraphQL's type safet
 
 ## Project Structure
 
-```
+```text
 grok-multiagent-plugin/
 ├── src/bridge/              # Core bridge (shared by both platforms)
 ├── platforms/
