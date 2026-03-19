@@ -1,10 +1,8 @@
 # Grok Swarm
 
-**Multi-agent intelligence powered by Grok 4.20 Multi-Agent Beta**
+Multi-agent intelligence powered by Grok 4.20 Multi-Agent Beta. Give any AI coding agent access to a 4-agent swarm with ~2M token context for code analysis, refactoring, generation, and complex reasoning.
 
-Give any AI coding agent access to a 4-agent swarm with ~2M token context for code analysis, refactoring, generation, and complex reasoning.
-
-- **Version:** 1.0.2
+- **Version:** 1.0.3
 - **Platforms:** OpenClaw, Claude Code
 - **Modes:** analyze, refactor, code, reason, orchestrate
 
@@ -80,7 +78,7 @@ The skill searches for your API key in this order:
 
 **Recommended:** Set `OPENROUTER_API_KEY` or use `~/.config/grok-swarm/config.json`.
 
-## ⚠️ Security Notes
+## Security Notes
 
 ### File Writing
 
