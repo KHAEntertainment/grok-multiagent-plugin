@@ -1,0 +1,29 @@
+{
+  "name": "khaentertainment",
+  "owner": {
+    "name": "KHA Entertainment",
+    "email": "support@openclaw.dev"
+  },
+  "metadata": {
+    "description": "KHA Entertainment's collection of AI coding tools, including the Grok Swarm multi-agent plugin powered by xAI Grok 4.20."
+  },
+  "plugins": [
+    {
+      "name": "grok-swarm",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
+        "path": "platforms/claude",
+        "ref": "main"
+      },
+      "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. 4-agent swarm with ~2M token context for code analysis, refactoring, and reasoning.",
+      "version": "1.0.0",
+      "author": {
+        "name": "OpenClaw"
+      },
+      "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
+      "license": "MIT",
+      "keywords": ["grok", "multi-agent", "xai", "openrouter", "code-review", "refactoring", "security", "analysis"]
+    }
+  ]
+}
