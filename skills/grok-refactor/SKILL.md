@@ -4,7 +4,10 @@
 
 Give any AI coding agent access to a 4-agent swarm with ~2M token context for code analysis, refactoring, generation, and complex reasoning.
 
-- **Version:** 1.0.3
+> **Why does security software flag this?**
+> This tool spawns a Python process to call the Grok API. Any tool that executes external processes will be flagged by static analysis — this is expected behavior for a CLI tool, not evidence of malware. The tool performs no network infiltration, privilege escalation, or persistent background activity beyond installation.
+
+- **Version:** 1.0.6
 - **Platforms:** OpenClaw, Claude Code
 - **Modes:** analyze, refactor, code, reason, orchestrate
 
