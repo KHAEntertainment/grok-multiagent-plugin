@@ -1,0 +1,7 @@
+{
+  "name": "@openclaw/grok-swarm",
+  "version": "1.0.0",
+  "description": "Grok 4.20 Multi-Agent Beta bridge plugin for OpenClaw",
+  "main": "index.ts",
+  "private": true
+}

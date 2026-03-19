@@ -4,7 +4,7 @@
 
 - **Version:** 1.0.0
 - **Status:** Functional ✅ (Built 2026-03-16)
-- **Assigned:** Billy, Barry
+- **Repo:** https://github.com/KHAEntertainment/grok-multiagent-plugin
 
 ---
 
@@ -20,115 +20,113 @@ It provides any OpenClaw agent with access to powerful multi-agent reasoning for
 
 ---
 
-## Architecture
+## Project Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     OpenClaw Agent (Barry, etc.)                 │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                ┌───────────────┴───────────────┐
-                ▼                               ▼
-   ┌────────────────────┐          ┌─────────────────────┐
-   │  Native Tool Call   │          │  Direct CLI Bridge  │
-   │  (grok_swarm tool)  │          │  (skill/index.js)   │
-   └────────────────────┘          └─────────────────────┘
-                │                               │
-                └───────────────┬───────────────┘
-                                ▼
-                    ┌───────────────────────┐
-                    │   index.js (Node.js)   │
-                    │   Timeout enforcement  │
-                    │   Arg parsing          │
-                    └───────────────────────┘
-                                │
-                                ▼
-                    ┌───────────────────────┐
-                    │ grok_bridge.py (Python)│
-                    │ OpenAI SDK → OpenRouter│
-                    └───────────────────────┘
-                                │
-                                ▼
-                    ┌───────────────────────┐
-                    │   OpenRouter API       │
-                    │ x-ai/grok-4.20-multi-  │
-                    │ agent-beta            │
-                    └───────────────────────┘
-                                │
-                ┌───────────────┼───────────────┐
-                ▼               ▼               ▼
-         ┌──────────┐    ┌──────────┐    ┌──────────┐
-         │ Agent 1  │    │ Agent 2  │    │ Agent 3  │  + 1 more
-         │ Orchestr│    │ Specialist│    │ Critic   │
-         └──────────┘    └──────────┘    └──────────┘
-                                │
-                                ▼
-                         ┌──────────┐
-                         │ Response │
-                         │ (content │
-                         │ only)    │
-                         └──────────┘
+grok-multiagent-plugin/
+├── src/
+│   ├── bridge/
+│   │   ├── grok_bridge.py    # Python API bridge
+│   │   └── index.js          # Node.js wrapper
+│   └── plugin/
+│       ├── index.ts          # OpenClaw plugin
+│       ├── openclaw.plugin.json
+│       └── package.json
+├── tests/
+│   └── TEST_RESULTS.md
+├── docs/                     # (future)
+├── README.md
+├── CLAWHUB.md
+├── CHANGELOG.md
+├── requirements.txt
+└── .gitignore
 ```
 
 ---
 
-## File Locations
+## Installation
 
-| Component | Location | Description |
-|-----------|----------|-------------|
-| **Core Skill** | `~/.openclaw/skills/grok-refactor/` | Bridge scripts and documentation |
-| **Plugin** | `~/.openclaw/extensions/grok-swarm/` | Native OpenClaw tool registration |
-| **Project** | `~/projects/grok-multi-agent/` | Documentation and ClawHub packaging |
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
+cd grok-multiagent-plugin
+```
+
+### 2. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Set up the skill
+
+```bash
+mkdir -p ~/.openclaw/skills/grok-refactor
+cp -r src/bridge/* ~/.openclaw/skills/grok-refactor/
+```
+
+### 4. Set up the plugin
+
+```bash
+mkdir -p ~/.openclaw/extensions/grok-swarm
+cp -r src/plugin/* ~/.openclaw/extensions/grok-swarm/
+```
+
+### 5. Configure OpenClaw
+
+Add to `openclaw.json`:
+
+```json
+{
+  "plugins": {
+    "allow": ["grok-swarm"],
+    "entries": {
+      "grok-swarm": {
+        "enabled": true,
+        "config": {}
+      }
+    }
+  },
+  "agents": {
+    "list": [{
+      "id": "coder",
+      "tools": {
+        "allow": ["grok_swarm"]
+      }
+    }]
+  }
+}
+```
+
+### 6. Restart OpenClaw
+
+```bash
+openclaw gateway restart
+```
 
 ---
 
-## Quick Start
+## Usage
 
-### 1. Prerequisites
+### Via OpenClaw Tool
 
-- OpenClaw v2026.3.0+
-- Python 3.8+ with `openai` package
-- OpenRouter API key with Grok 4.20 access
-
-### 2. Installation
-
-The plugin and skill are already installed. Verify:
-
-```bash
-openclaw status | grep grok
+```javascript
+const result = await tools.grok_swarm({
+  prompt: "Analyze the security of this auth module",
+  mode: "analyze",
+  files: ["src/auth/login.js", "src/auth/session.js"],
+  timeout: 180
+});
 ```
 
-Should show: `grok-swarm: loaded`
-
-### 3. Configuration
-
-The OpenRouter API key should already be configured in your OpenClaw auth profiles:
+### Via CLI
 
 ```bash
-# Test connectivity
-node ~/.openclaw/skills/grok-refactor/index.js --prompt "Hello" --mode reason
-```
-
-### 4. Usage
-
-```bash
-# Analyze a codebase
 node ~/.openclaw/skills/grok-refactor/index.js \
   --mode analyze \
   --prompt "Find security vulnerabilities in this codebase" \
   --files src/*.ts
-
-# Refactor code
-node ~/.openclaw/skills/grok-refactor/index.js \
-  --mode refactor \
-  --prompt "Convert this to async/await patterns" \
-  --files src/legacy/*.js
-
-# Generate code
-node ~/.openclaw/skills/grok-refactor/index.js \
-  --mode code \
-  --prompt "Write a rate limiter middleware" \
-  --files package.json
 ```
 
 ---
@@ -166,46 +164,6 @@ node ~/.openclaw/skills/grok-refactor/index.js \
 }
 ```
 
-### Agent Tool Access
-
-```json
-{
-  "agents": {
-    "list": [{
-      "id": "coder",
-      "tools": {
-        "allow": ["grok_swarm"]
-      }
-    }]
-  }
-}
-```
-
----
-
-## API Reference
-
-### Via OpenClaw Tool (Native)
-
-```javascript
-const result = await tools.grok_swarm({
-  prompt: "Analyze the security of this auth module",
-  mode: "analyze",
-  files: ["src/auth/login.js", "src/auth/session.js"],
-  timeout: 180
-});
-```
-
-### Via CLI
-
-```bash
-node ~/.openclaw/skills/grok-refactor/index.js \
-  --prompt "<task>" \
-  --mode <mode> \
-  --files <file1> <file2> \
-  --timeout <seconds>
-```
-
 ### Parameters
 
 | Parameter | Type | Required | Default | Description |
@@ -221,44 +179,39 @@ node ~/.openclaw/skills/grok-refactor/index.js \
 
 ## Known Limitations
 
-1. **Content Filter** — Grok may block overly terse/artificial prompts. Use natural language.
-
-2. **Subtle Bugs** — Generated code may have undefined variables. Human review recommended before production use.
-
-3. **Latency** — Multi-agent coordination adds 30-90s for complex tasks. Budget accordingly.
-
-4. **No Tool Loop** — This is a single-shot call, not an agent loop. For tool use, pass `--tools` with OpenAI-format schema.
-
----
-
-## Troubleshooting
-
-### "Bridge script not found"
-
-```bash
-# Verify skill is installed
-ls ~/.openclaw/skills/grok-refactor/grok_bridge.py
-```
-
-### "No OpenRouter API key found"
-
-```bash
-# Check auth profiles
-cat ~/.openclaw/agents/coder/agent/auth-profiles.json | jq '.profiles.openrouter'
-```
-
-### Timeout errors
-
-Increase timeout for large codebases:
-```bash
-node ~/.openclaw/skills/grok-refactor/index.js --timeout 300 ...
-```
+1. **Content Filter** — Grok may block overly terse prompts. Use natural language.
+2. **Subtle Bugs** — Generated code may have undefined variables. Human review recommended.
+3. **Latency** — Multi-agent coordination adds 30-90s for complex tasks.
+4. **Python venv** — The `.venv` directory is not in this repo. Create it via `pip install -r requirements.txt`.
 
 ---
 
 ## Testing
 
 See [tests/TEST_RESULTS.md](tests/TEST_RESULTS.md) for documented test runs.
+
+---
+
+## Architecture
+
+```
+OpenClaw Agent
+       │
+       ▼
+grok_swarm tool (plugin)
+       │
+       ▼
+index.js (Node wrapper, timeout enforcement)
+       │
+       ▼
+grok_bridge.py (Python, OpenAI SDK → OpenRouter)
+       │
+       ▼
+xAI Grok 4.20 Multi-Agent Beta (4 agents)
+       │
+       ▼
+Response (reasoning stripped, content only)
+```
 
 ---
 
@@ -270,5 +223,5 @@ MIT
 
 ## Support
 
-- OpenClaw Discord: https://discord.com/invite/clawd
-- ClawHub: https://clawhub.com
+- Issues: https://github.com/KHAEntertainment/grok-multiagent-plugin/issues
+- Discord: https://discord.com/invite/clawd
