@@ -142,6 +142,9 @@ function run() {
     pyArgs.push('--write-files');
   }
 
+  // Skip --output-dir if it matches the Python bridge default.
+  // This optimization reduces CLI noise; CLI invocations bypass this wrapper
+  // via src/plugin/index.ts, which sets defaults at the plugin layer.
   if (opts.outputDir && opts.outputDir !== './grok-output/') {
     pyArgs.push('--output-dir', opts.outputDir);
   }

@@ -162,8 +162,8 @@ def _safe_dest(output_path, file_path):
     resolved_root = output_path.resolve()
     try:
         dest.relative_to(resolved_root)
-    except ValueError:
-        raise ValueError(f"Path escapes output directory: {file_path!r}")
+    except ValueError as exc:
+        raise ValueError(f"Path escapes output directory: {file_path!r}") from exc
     return dest
 
 
@@ -202,10 +202,16 @@ def parse_and_write_files(response_text, output_dir):
         written.append((file_path, len(encoded)))
         return True
 
-    # Split into code blocks by ``` fences
+    # Split into code blocks by ``` fences.
+    # Even indices are fence markers or text between fences; skip them.
+    # Odd indices are the actual code block contents.
     parts = re.split(r'```', response_text)
     
-    for part in parts:
+    for i, part in enumerate(parts):
+        if i % 2 == 0:
+            # Skip even-indexed parts (fences/text between fences)
+            continue
+        
         # Check for lang:path at start (language tag contains the path)
         lang_match = lang_path_pattern.match(part)
         if lang_match:
