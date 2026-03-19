@@ -139,13 +139,15 @@ const result = await tools.grok_swarm({
 
 ## Task Modes
 
-| Mode | Description | Use Case |
-|------|-------------|----------|
-| `analyze` | Deep code review, security audit, architecture assessment | Security reviews, PR reviews, tech debt assessment |
-| `refactor` | Improve code quality while preserving behavior | Modernization, migration, cleanup of legacy code |
-| `code` | Generate clean, production-ready code | Building features, writing tests, boilerplate |
-| `reason` | Collaborative multi-perspective reasoning | Research synthesis, decision making, trade-off analysis |
-| `orchestrate` | Custom agent handoff with your system prompt | When you need full control over swarm's behavior |
+| Mode | Description | Use Case | Platform |
+|------|-------------|----------|----------|
+| `analyze` | Deep code review, security audit, architecture assessment | Security reviews, PR reviews, tech debt assessment | Claude Code, OpenClaw |
+| `refactor` | Improve code quality while preserving behavior | Modernization, migration, cleanup of legacy code | Claude Code, OpenClaw |
+| `code` | Generate clean, production-ready code | Building features, writing tests, boilerplate | Claude Code, OpenClaw |
+| `reason` | Collaborative multi-perspective reasoning | Research synthesis, decision making, trade-off analysis | Claude Code, OpenClaw |
+| `orchestrate` | Custom agent handoff with your system prompt | When you need full control over swarm's behavior | OpenClaw only[^1] |
+
+[^1]: `orchestrate` requires a custom system prompt and is not available as a Claude Code skill. Use it via OpenClaw or direct API calls.
 
 ---
 
