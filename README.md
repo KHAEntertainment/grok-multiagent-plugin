@@ -189,18 +189,23 @@ const result = await tools.grok_swarm({
 ls ~/.openclaw/skills/grok-refactor/grok_bridge.py
 ```
 
-### "No OpenRouter API key"
-Configure your key in OpenClaw auth profiles:
+### OpenRouter API Key
+
+Grok Swarm resolves your API key in this order (highest to lowest priority):
+
+1. **Environment variables** — `OPENROUTER_API_KEY` or `XAI_API_KEY`
+2. **Local config file** — `~/.config/grok-swarm/config.json` with `{"api_key": "..."}`
+3. **OpenClaw auth profiles** — `~/.openclaw/agents/coder/agent/auth-profiles.json`
+
 ```bash
-# Add to ~/.openclaw/agents/coder/agent/auth-profiles.json
-{
-  "profiles": {
-    "openrouter:default": {
-      "key": "your-key-here"
-    }
-  }
-}
+# If you set an env var, it takes precedence over config files:
+export OPENROUTER_API_KEY="sk-or-v1-xxx"   # This overrides ~/.config/grok-swarm/config.json!
+
+# To use the local config file instead, unset the env var:
+unset OPENROUTER_API_KEY
 ```
+
+**Get a key at:** https://openrouter.ai/keys
 
 ### Timeout errors
 Increase timeout for large codebases:
