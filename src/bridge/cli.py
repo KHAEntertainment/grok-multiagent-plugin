@@ -48,13 +48,36 @@ def apply_with_morph(blocks, base_dir):
 
     applied = 0
     errors = []
+    base_resolved = Path(base_dir).resolve()
 
     for block in blocks:
         # For Morph, we prefer partial edits. Use path_hint as target.
         path_hint = block.get("path_hint", "")
         if not path_hint:
             # Try to infer from code
-            path_hint = block.get("inferred_path", "output.txt")
+            inferred_path = block.get("inferred_path", "")
+            if not inferred_path:
+                # No valid path - skip this block
+                errors.append("No path_hint or inferred_path provided - skipping partial edit")
+                continue
+            path_hint = inferred_path
+
+        # Sanitize and validate path_hint to prevent path traversal
+        # Check if path_hint is absolute
+        path_obj = Path(path_hint)
+        if path_obj.is_absolute():
+            errors.append(f"{path_hint}: absolute paths not allowed")
+            continue
+
+        # Resolve the full path and ensure it's within base_dir
+        try:
+            target_path = (base_resolved / path_hint).resolve()
+            # Validate containment
+            target_path.relative_to(base_resolved)
+            validated_path = str(target_path)
+        except ValueError:
+            errors.append(f"{path_hint}: path traversal detected - outside base_dir")
+            continue
 
         # Build the morphllm_edit_file tool call
         tool_call = {
@@ -64,7 +87,7 @@ def apply_with_morph(blocks, base_dir):
             "params": {
                 "name": "morphllm_edit_file",
                 "arguments": {
-                    "file_path": str(Path(base_dir) / path_hint),
+                    "file_path": validated_path,
                     "code": block["code"],
                     "language": block.get("language", ""),
                 }
@@ -75,7 +98,7 @@ def apply_with_morph(blocks, base_dir):
         try:
             result = subprocess.run(
                 ["claude", "mcp", "call", "morphllm", "edit_file",
-                 "--file", str(Path(base_dir) / path_hint),
+                 "--file", validated_path,
                  "--code", block["code"],
                  "--language", block.get("language", "")],
                 capture_output=True,
@@ -191,12 +214,16 @@ def main():
     )
     elapsed = time.time() - start
 
+    # Preserve raw result for output
+    raw_result = result
+
     # Handle JSON tool call responses
     response_data = None
+    normalized_result = result
     if result.startswith("{") and '"tool_calls"' in result:
         try:
             response_data = json.loads(result)
-            result = response_data.get("content", result)
+            normalized_result = response_data.get("content", result)
         except json.JSONDecodeError:
             pass
 
@@ -207,7 +234,7 @@ def main():
         if use_morph and args.apply:
             # Use Morph LLM for edits
             from apply import parse_code_blocks
-            blocks = parse_code_blocks(result)
+            blocks = parse_code_blocks(normalized_result)
 
             if not blocks:
                 print("\nNo code blocks found to apply via Morph.", file=sys.stderr)
@@ -220,14 +247,14 @@ def main():
                         print(f"  Error: {err}", file=sys.stderr)
         else:
             # Use direct file writing
-            summary = parse_and_write(result, output_dir, dry_run=not args.apply)
+            summary = parse_and_write(normalized_result, output_dir, dry_run=not args.apply)
             print(summary, file=sys.stderr)
 
     # Write raw output if requested
     if args.output:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(result)
+        output_path.write_text(raw_result)
         print(f"Output written to {args.output}", file=sys.stderr)
 
     # Execute command if requested
@@ -248,9 +275,9 @@ def main():
             print(f"Command exited with code {exec_result.returncode}", file=sys.stderr)
             sys.exit(exec_result.returncode)
 
-    # Output the raw response to stdout (unless we wrote files and nothing else)
+    # Output the normalized response to stdout (unless we wrote files and nothing else)
     if not args.output and not args.execute:
-        print(result)
+        print(normalized_result)
 
     print(f"\nCompleted in {elapsed:.1f}s", file=sys.stderr)
 

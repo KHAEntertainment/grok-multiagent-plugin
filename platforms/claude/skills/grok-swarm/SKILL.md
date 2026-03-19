@@ -32,11 +32,11 @@ pip install -e .
 
 ## Basic Usage
 
-```
+```text
 /grok-swarm:refactor Convert this to async/await
 /grok-swarm:analyze Find security vulnerabilities in auth/
 /grok-swarm:code Write a FastAPI endpoint for user registration
-/grokwarm:reason Compare microservices vs monolith for this project
+/grok-swarm:reason Compare microservices vs monolith for this project
 ```
 
 ## File Writing Modes
@@ -45,7 +45,7 @@ pip install -e .
 
 Generate code and preview what files would be created:
 
-```
+```text
 /grok-swarm:code Write a FastAPI user endpoint --output-dir ./src
 ```
 
@@ -55,7 +55,7 @@ This shows the code blocks Grok returns without writing anything to disk.
 
 Use `--apply` to actually write the generated files:
 
-```
+```text
 /grok-swarm:code Write a FastAPI user endpoint --output-dir ./src --apply
 ```
 
@@ -65,7 +65,7 @@ Files are written based on code block headers (e.g., `python src/routes/users.py
 
 Use `--execute` to run a command after Grok responds:
 
-```
+```text
 /grok-swarm:refactor Modernize auth/ --output-dir ./auth --apply --execute "pytest tests/"
 ```
 
@@ -75,7 +75,7 @@ This is useful for generate → test workflows.
 
 For partial file edits (not full file replacement), use the `--use-morph` flag:
 
-```
+```text
 /grok-swarm:refactor Convert this function to async --use-morph --apply
 ```
 
@@ -110,25 +110,25 @@ claude mcp add morphllm
 
 ### Preview new code:
 
-```
+```text
 /grok-swarm:code Write a Python CLI with argparse --output-dir ./cli
 ```
 
 ### Generate and write:
 
-```
+```text
 /grok-swarm:code Write a React component --apply --output-dir ./components
 ```
 
 ### Generate, write, and test:
 
-```
+```text
 /grok-swarm:refactor Improve error handling in api/ --apply --execute "make test"
 ```
 
 ### Analyze with Morph edits:
 
-```
+```text
 /grok-swarm:refactor Add type hints to main.py --use-morph --apply
 ```
 
