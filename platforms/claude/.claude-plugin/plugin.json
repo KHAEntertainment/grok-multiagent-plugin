@@ -1,12 +1,22 @@
 {
   "manifestVersion": 1,
   "name": "grok-swarm",
-  "version": "1.0.9",
+  "version": "1.2.0",
   "displayName": "Grok Swarm",
   "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Use for codebase analysis, refactoring, code generation, and complex reasoning.",
   "author": {
     "name": "OpenClaw"
   },
   "license": "MIT",
-  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin"
+  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
+  "commands": [
+    {
+      "name": "setup",
+      "description": "Set up your OpenRouter API key for Grok Swarm"
+    },
+    {
+      "name": "stats",
+      "description": "Show token usage and cost statistics"
+    }
+  ]
 }

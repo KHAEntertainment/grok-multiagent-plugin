@@ -36,17 +36,54 @@ Grok Swarm is a dual-platform OpenClaw + Claude Code integration that bridges to
 
 ## In Progress 🚧
 
-### Packaging (Next Steps)
-- [ ] Package as NPM module (`@openclaw/grok-swarm`)
-- [ ] Package as ClawHub skill
-- [ ] Package as Claude Code Marketplace Plugin (via GitHub Repo)
+### Packaging & Distribution
+- [x] Package as NPM module (`@khaentertainment/grok-swarm`)
+- [x] Package as ClawHub skill
+- [x] Package as Claude Code Marketplace Plugin (via GitHub Repo)
 - [ ] Test new packages/install methods
-- [ ] Update docs with new install methods
-- [ ] Submit to ClawHub / NPM Registry
+- [ ] Verify ClawHub install flow works end-to-end
+- [ ] Verify Claude Code marketplace install flow works end-to-end
 
 ### Documentation Gaps
 - [ ] Installation video/screenshot walkthrough
 - [ ] Troubleshooting section expansion
+
+---
+
+## Planned Features (GitHub Issues)
+
+| Issue | Title | Priority |
+|-------|-------|----------|
+| #9 | Interactive TUI Setup Flow for Claude Code | Medium |
+| #10 | High Thinking Mode - 16 Agent Swarm via Toggle | Medium |
+| #11 | Cost/Usage Dashboard for Token and Credit Tracking | High |
+| #12 | Grounding System Prompt for Agentic Assistant Context | High |
+
+### Feature Details
+
+#### #11 — Cost/Usage Dashboard
+**Why High Priority:** Grok 4.20 can burn through credits quickly. Users need visibility into token usage and costs.
+
+**MVP Approach:**
+- Slash command: `/grok-swarm:stats`
+- Store usage in `~/.config/grok-swarm/usage.json`
+- Use OpenRouter API for quota status
+
+**Future:** TUI dashboard + Telegram Mini App
+
+#### #12 — Grounding System Prompt
+**Why High Priority:** Grok needs consistent context about its role as an agentic assistant.
+
+**Approach:**
+- Default system prompt establishing agentic role
+- User-configurable via `~/.config/grok-swarm/system-prompt.txt`
+- Merge with per-request prompts
+
+#### #9 — Interactive TUI Setup
+**Approach:** Leverage Claude Code's TUI generation abilities for first-run setup.
+
+#### #10 — High Thinking Mode
+**Approach:** Add `--thinking high` flag to enable 16-agent mode.
 
 ---
 
