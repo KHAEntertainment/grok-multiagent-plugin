@@ -29,6 +29,22 @@ except ImportError:
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 MODEL_ID = "x-ai/grok-4.20-multi-agent-beta"
 
+# Agent counts per thinking level
+AGENT_COUNTS = {
+    "low": 4,
+    "high": 16,
+}
+
+# Plain-language phrases that trigger High Thinking mode automatically
+HIGH_THINKING_PHRASES = [
+    "16 agent swarm",
+    "16-agent swarm",
+    "high thinking",
+    "high thinking mode",
+    "thinking mode high",
+    "--thinking high",
+]
+
 # Mode-specific system prompts
 MODE_PROMPTS = {
     "refactor": (
@@ -225,7 +241,13 @@ def parse_and_write_files(response_text, output_dir):
     
     return written
 
-def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120):
+def detect_high_thinking(prompt):
+    """Return True if the prompt contains a plain-language High Thinking trigger."""
+    lower = prompt.lower()
+    return any(phrase in lower for phrase in HIGH_THINKING_PHRASES)
+
+
+def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120, thinking="low"):
     """Make the API call to Grok 4.20 Multi-Agent Beta."""
     api_key = get_api_key()
     if not api_key:
@@ -262,7 +284,7 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
         "messages": messages,
         "max_tokens": 16384,
         "temperature": 0.3,
-        "extra_body": {"agent_count": 4},
+        "extra_body": {"agent_count": AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])},
     }
 
     if tools:
@@ -288,7 +310,9 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
     # Log usage
     if hasattr(response, 'usage') and response.usage:
         u = response.usage
-        print(f"USAGE: mode={mode} prompt={u.prompt_tokens} completion={u.completion_tokens} "
+        agent_count = AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])
+        print(f"USAGE: mode={mode} thinking={thinking} agents={agent_count} "
+              f"prompt={u.prompt_tokens} completion={u.completion_tokens} "
               f"total={u.total_tokens} time={elapsed:.1f}s", file=sys.stderr)
 
     # Handle content filtering
@@ -337,8 +361,19 @@ def main():
                         help="Parse response for annotated code blocks and write to --output-dir")
     parser.add_argument("--output-dir", default="./grok-output/",
                         help="Directory for file writes (default: ./grok-output/)")
+    parser.add_argument("--thinking", default=None, choices=["low", "high"],
+                        help="Thinking level: low (4 agents) or high (16 agents, High Thinking mode) (default: low)")
 
     args = parser.parse_args()
+
+    # Auto-detect High Thinking mode from plain language in prompt (only if not explicitly set)
+    thinking = args.thinking
+    if thinking is None:
+        if detect_high_thinking(args.prompt):
+            thinking = "high"
+            print("INFO: High Thinking mode detected from prompt — using 16-agent swarm", file=sys.stderr)
+        else:
+            thinking = "low"
 
     # Validate orchestrate mode
     if args.mode == "orchestrate" and not args.system:
@@ -356,7 +391,9 @@ def main():
     tools = load_tools(args.tools)
 
     # Call Grok
-    print(f"Calling {MODEL_ID} (mode={args.mode}, 4 agents, timeout={args.timeout}s)...", file=sys.stderr)
+    agent_count = AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])
+    thinking_label = " [HIGH THINKING MODE — 16-agent swarm]" if thinking == "high" else ""
+    print(f"Calling {MODEL_ID} (mode={args.mode}, {agent_count} agents, timeout={args.timeout}s){thinking_label}...", file=sys.stderr)
     result = call_grok(
         prompt=args.prompt,
         mode=args.mode,
@@ -364,6 +401,7 @@ def main():
         system_override=args.system,
         tools=tools,
         timeout=args.timeout,
+        thinking=thinking,
     )
 
     # Output

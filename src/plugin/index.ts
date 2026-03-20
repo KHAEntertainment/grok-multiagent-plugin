@@ -61,6 +61,19 @@ const GrokSwarmSchema = Type.Object({
       description: "Directory to write files into (default: ./grok-output/)",
     }),
   ),
+  thinking: Type.Optional(
+    Type.Union(
+      [
+        Type.Literal("low"),
+        Type.Literal("high"),
+      ],
+      {
+        description:
+          "Thinking level: 'low' (4-agent swarm, default) or 'high' (16-agent swarm, High Thinking mode). " +
+          "You can also trigger High Thinking with plain language: include '16 agent swarm' or 'high thinking' in the prompt.",
+      },
+    ),
+  ),
 });
 
 export default function (api: any) {
@@ -69,8 +82,9 @@ export default function (api: any) {
       name: "grok_swarm",
       label: "Grok Swarm",
       description:
-        "Delegate tasks to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm with 2M context). " +
-        "Use for codebase analysis, refactoring, code generation, or complex reasoning. " +
+        "Delegate tasks to xAI Grok 4.20 Multi-Agent Beta. " +
+        "Default: 4-agent swarm with 2M context. " +
+        "Set thinking='high' (or include '16 agent swarm' in the prompt) to activate High Thinking mode (16-agent swarm). " +
         "Modes: refactor, analyze, code, reason, orchestrate. " +
         "With write_files=true, annotated code blocks are written directly to disk and a " +
         "compact summary is returned instead of the full response.",
@@ -127,6 +141,10 @@ export default function (api: any) {
             args.push("--output-dir", params.output_dir);
           } else if (api.config?.defaultOutputDir) {
             args.push("--output-dir", api.config.defaultOutputDir);
+          }
+
+          if (params.thinking) {
+            args.push("--thinking", params.thinking);
           }
 
           // Spawn Python bridge with timeout enforcement
