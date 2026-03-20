@@ -143,8 +143,8 @@ export default function (api: any) {
             args.push("--output-dir", api.config.defaultOutputDir);
           }
 
-          if (params.thinking === "high") {
-            args.push("--thinking", "high");
+          if (params.thinking) {
+            args.push("--thinking", params.thinking);
           }
 
           // Spawn Python bridge with timeout enforcement

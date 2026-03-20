@@ -361,16 +361,19 @@ def main():
                         help="Parse response for annotated code blocks and write to --output-dir")
     parser.add_argument("--output-dir", default="./grok-output/",
                         help="Directory for file writes (default: ./grok-output/)")
-    parser.add_argument("--thinking", default="low", choices=["low", "high"],
+    parser.add_argument("--thinking", default=None, choices=["low", "high"],
                         help="Thinking level: low (4 agents) or high (16 agents, High Thinking mode) (default: low)")
 
     args = parser.parse_args()
 
-    # Auto-detect High Thinking mode from plain language in prompt
+    # Auto-detect High Thinking mode from plain language in prompt (only if not explicitly set)
     thinking = args.thinking
-    if thinking != "high" and detect_high_thinking(args.prompt):
-        thinking = "high"
-        print("INFO: High Thinking mode detected from prompt — using 16-agent swarm", file=sys.stderr)
+    if thinking is None:
+        if detect_high_thinking(args.prompt):
+            thinking = "high"
+            print("INFO: High Thinking mode detected from prompt — using 16-agent swarm", file=sys.stderr)
+        else:
+            thinking = "low"
 
     # Validate orchestrate mode
     if args.mode == "orchestrate" and not args.system:

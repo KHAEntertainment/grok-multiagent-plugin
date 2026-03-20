@@ -30,7 +30,7 @@ function parseArgs() {
     output: null,
     writeFiles: false,
     outputDir: './grok-output/',
-    thinking: 'low',
+    thinking: undefined,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -113,7 +113,7 @@ High Thinking Mode:
   }
 
   const VALID_THINKING = ['low', 'high'];
-  if (!VALID_THINKING.includes(parsed.thinking)) {
+  if (parsed.thinking !== undefined && !VALID_THINKING.includes(parsed.thinking)) {
     console.error(`ERROR: Invalid thinking level '${parsed.thinking}'. Valid: ${VALID_THINKING.join(', ')}`);
     process.exit(1);
   }
@@ -164,7 +164,7 @@ function run() {
     pyArgs.push('--output-dir', opts.outputDir);
   }
 
-  if (opts.thinking && opts.thinking !== 'low') {
+  if (opts.thinking !== undefined) {
     pyArgs.push('--thinking', opts.thinking);
   }
 
