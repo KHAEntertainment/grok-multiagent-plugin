@@ -30,6 +30,7 @@ function parseArgs() {
     output: null,
     writeFiles: false,
     outputDir: './grok-output/',
+    thinking: 'low',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -60,12 +61,15 @@ function parseArgs() {
       case '--write-files':
         parsed.writeFiles = true;
         break;
+      case '--thinking':
+        parsed.thinking = args[++i];
+        break;
       case '--output-dir':
         parsed.outputDir = args[++i];
         break;
       case '--help':
         console.log(`
-grok_swarm — Bridge to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm)
+grok-swarm — Bridge to xAI Grok 4.20 Multi-Agent Beta
 
 Usage:
   node index.js --prompt "instruction" [options]
@@ -80,6 +84,7 @@ Options:
   --output <path>     Output file (default: stdout)
   --write-files       Parse response for annotated code blocks and write files
   --output-dir <path> Directory for file writes (default: ./grok-output/)
+  --thinking <level>  Thinking level: low (4-agent swarm) or high (16-agent swarm, High Thinking mode) (default: low)
   --help              Show this help
 
 Modes:
@@ -88,6 +93,10 @@ Modes:
   code       Generate new code, implement features, write tests
   reason     Complex reasoning, research synthesis, multi-perspective analysis
   orchestrate  Full prompt control — requires --system flag
+
+High Thinking Mode:
+  Use --thinking high to activate Grok's High Thinking capability (16-agent swarm).
+  You can also trigger it with plain language: include "16 agent swarm" or "high thinking" in your prompt.
 `);
         process.exit(0);
     }
@@ -100,6 +109,12 @@ Modes:
 
   if (!VALID_MODES.includes(parsed.mode)) {
     console.error(`ERROR: Invalid mode '${parsed.mode}'. Valid: ${VALID_MODES.join(', ')}`);
+    process.exit(1);
+  }
+
+  const VALID_THINKING = ['low', 'high'];
+  if (!VALID_THINKING.includes(parsed.thinking)) {
+    console.error(`ERROR: Invalid thinking level '${parsed.thinking}'. Valid: ${VALID_THINKING.join(', ')}`);
     process.exit(1);
   }
 
@@ -147,6 +162,10 @@ function run() {
   // via src/plugin/index.ts, which sets defaults at the plugin layer.
   if (opts.outputDir && opts.outputDir !== './grok-output/') {
     pyArgs.push('--output-dir', opts.outputDir);
+  }
+
+  if (opts.thinking && opts.thinking !== 'low') {
+    pyArgs.push('--thinking', opts.thinking);
   }
 
   // Spawn Python process
