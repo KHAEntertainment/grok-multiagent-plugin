@@ -8,15 +8,5 @@
     "name": "OpenClaw"
   },
   "license": "MIT",
-  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
-  "commands": [
-    {
-      "name": "setup",
-      "description": "Set up your OpenRouter API key for Grok Swarm"
-    },
-    {
-      "name": "stats",
-      "description": "Show token usage and cost statistics"
-    }
-  ]
+  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin"
 }
