@@ -58,6 +58,7 @@ Grok Swarm is a dual-platform OpenClaw + Claude Code integration that bridges to
 | #10 | High Thinking Mode - 16 Agent Swarm via Toggle | Medium |
 | #11 | Cost/Usage Dashboard for Token and Credit Tracking | High |
 | #12 | Grounding System Prompt for Agentic Assistant Context | High |
+| #13 | Secure Credential Management for Claude Code | High |
 
 ### Feature Details
 
