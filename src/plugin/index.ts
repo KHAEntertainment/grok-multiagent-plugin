@@ -76,7 +76,7 @@ const GrokSwarmSchema = Type.Object({
   ),
 });
 
-export default function (api: any) {
+export default async function (api: any) {
   api.registerTool(
     {
       name: "grok_swarm",
@@ -215,6 +215,6 @@ export default function (api: any) {
   );
 
   // Register autonomous agent tool
-  const { default: registerAgent } = await import("./grok_agent_plugin.js");
+  const { default: registerAgent } = await import("./grok_agent_plugin");
   registerAgent(api);
 }

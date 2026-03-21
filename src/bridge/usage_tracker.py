@@ -91,9 +91,12 @@ def get_stats(since_days=None):
                 if cutoff:
                     try:
                         rec_ts = datetime.fromisoformat(rec["ts"])
+                        # Normalize naive timestamps (assume UTC) so comparison is safe
+                        if rec_ts.tzinfo is None:
+                            rec_ts = rec_ts.replace(tzinfo=timezone.utc)
                         if rec_ts < cutoff:
                             continue
-                    except (KeyError, ValueError):
+                    except (KeyError, ValueError, TypeError):
                         pass
 
                 stats["calls"] += 1

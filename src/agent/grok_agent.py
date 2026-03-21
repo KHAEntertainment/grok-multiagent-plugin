@@ -21,6 +21,7 @@ Usage:
 
 import argparse
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -417,8 +418,8 @@ def verify_changes(state: AgentState) -> tuple[bool, str]:
 
     try:
         result = subprocess.run(
-            state.verify_cmd,
-            shell=True,
+            shlex.split(state.verify_cmd),
+            shell=False,
             capture_output=True,
             text=True,
             timeout=120,

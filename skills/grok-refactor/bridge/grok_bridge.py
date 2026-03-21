@@ -299,15 +299,21 @@ def parse_and_write_files(response_text, output_dir):
 
         # Pattern 3: bare '# filename.ext' as first non-empty line
         if filename_pattern is not None:
-            # Strip the language tag line if present, then check first content line
+            # Strip the language tag line if present, then scan for first non-empty content line
             content_start = part.find('\n')
-            first_line_end = part.find('\n', content_start + 1) if content_start >= 0 else -1
-            first_content = part[content_start + 1:first_line_end].strip() if content_start >= 0 else ""
-            fn_match = filename_pattern.match(first_content)
-            if fn_match:
-                filename = fn_match.group(1)
-                rest = part[first_line_end + 1:] if first_line_end >= 0 else ""
-                _write_file(filename, rest)
+            content = part[content_start + 1:] if content_start >= 0 else part
+            lines = content.splitlines(keepends=True)
+            for idx, line in enumerate(lines):
+                stripped = line.strip()
+                if not stripped:
+                    continue
+                fn_match = filename_pattern.match(stripped)
+                if fn_match:
+                    filename = fn_match.group(1)
+                    rest = "".join(lines[idx + 1:])
+                    _write_file(filename, rest)
+                # Only consider the first non-empty line for Pattern 3
+                break
 
     return written
 
