@@ -617,13 +617,13 @@ Examples:
   python3 grok_agent.py --task "refactor auth module" --target ./src/auth
 
   # Apply changes
-  python3 grok_agent.py --task "refactor auth module" --target ./src/auth --apply
+  python3 grok_agent.py "refactor auth module" --target ./src/auth --apply
 
   # With verification
-  python3 grok_agent.py --task "add tests" --target ./src --apply --verify-cmd "pytest"
+  python3 grok_agent.py "add tests" --target ./src --apply --verify-cmd "pytest"
 
   # OpenClaw platform
-  python3 grok_agent.py --platform openclaw --task "analyze security" --target .
+  python3 grok_agent.py --platform openclaw "analyze security" --target .
         """
     )
     parser.add_argument("--platform", choices=["claude", "openclaw"], default="claude",
@@ -638,7 +638,7 @@ Examples:
                        help="Command to run for verification (e.g., pytest)")
     parser.add_argument("--output-dir",
                        help="Output directory for new files (existing files remain in target)")
-    parser.add_argument("--task", "-t", required=True, dest="task",
+    parser.add_argument("task",
                        help="Natural language task instruction")
 
     args = parser.parse_args()
