@@ -167,11 +167,20 @@ def _safe_dest(output_path, file_path):
     """
     Resolve ``file_path`` relative to ``output_path`` and verify the result
     stays inside ``output_path``.  Returns the resolved Path or raises
-    ValueError for unsafe paths (absolute, containing ``..``, etc.).
+    ValueError for unsafe paths (containing ``..``, etc.).
+
+    Absolute paths are rebased under ``output_path`` using only the filename
+    component (e.g. ``/home/user/.sandbox/task.py`` → ``<output>/task.py``),
+    and a warning is printed to stderr.
     """
     raw = Path(file_path)
     if raw.is_absolute():
-        raise ValueError(f"Absolute paths are not allowed: {file_path!r}")
+        rebased = Path(raw.name)
+        print(
+            f"WARNING: Absolute path rebased to output dir: {file_path!r} → {rebased!r}",
+            file=sys.stderr,
+        )
+        raw = rebased
     if ".." in raw.parts:
         raise ValueError(f"Path traversal not allowed: {file_path!r}")
     dest = (output_path / raw).resolve()
@@ -418,11 +427,18 @@ def main():
                 print(f"  {rel_path} ({byte_count:,} bytes)")
             print(f"Total: {total_bytes:,} bytes")
         else:
+            # Save full response as a fallback so no output is lost
+            fallback_dir = Path(args.output_dir)
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            fallback_path = fallback_dir / "grok-response.txt"
+            fallback_path.write_text(result, encoding="utf-8")
             print(
-                "No annotated files found in model response to write to disk.\n"
-                "Re-run without --write-files to see the full response.",
+                f"ERROR: No annotated files found in model response.\n"
+                f"Full response saved to: {fallback_path}\n"
+                f"Tip: ask Grok to annotate code blocks with  ```lang:path/to/file  or  # FILE: path/to/file",
                 file=sys.stderr,
             )
+            sys.exit(1)
     elif not args.output:
         print(result)
 
