@@ -13,9 +13,10 @@
 import { spawn } from "child_process";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import { Type } from "@sinclair/typebox";
 
-const PLUGIN_ROOT = join(dirname(new URL(import.meta.url).pathname), "..", "..", "..");
+const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const DEFAULT_AGENT = join(PLUGIN_ROOT, "src", "agent", "grok_agent.py");
 
 const GrokAgentSchema = Type.Object({

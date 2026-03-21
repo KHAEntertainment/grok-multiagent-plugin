@@ -19,6 +19,10 @@ import sys
 import time
 from pathlib import Path
 
+# Import shared patterns
+sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
+from patterns import get_filename_pattern_string
+
 try:
     from openai import OpenAI
 except ImportError:
@@ -203,7 +207,7 @@ def parse_and_write_files(response_text, output_dir):
 
     # Pattern 3: # filename.py (just filename as first line - common Grok output)
     filename_pattern = re.compile(
-        r'^\s*#\s*([a-zA-Z_][a-zA-Z0-9_]*\.(?:py|js|ts|jsx|tsx|go|rs|java|c|cpp|h|hpp|cs|rb|php|swift|kt|scala|sh|bash))\s*$',
+        get_filename_pattern_string(),
         re.MULTILINE
     )
 

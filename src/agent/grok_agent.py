@@ -33,6 +33,10 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).parent.parent / "bridge"))
 from grok_bridge import call_grok, read_files
 
+# Import shared patterns
+sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
+from patterns import get_filename_pattern_string
+
 
 class Platform(Enum):
     CLAUDE = "claude"
@@ -143,7 +147,7 @@ def parse_code_blocks(response_text: str) -> list[dict]:
     )
 
     # Pattern 3: # filename.py (just filename as first line comment)
-    filename_pattern = re.compile(r'^\s*#\s*([a-zA-Z_][a-zA-Z0-9_]*\.(?:py|js|ts|go|rs|java|c|cpp|h|hpp|cs|rb|php|swift|kt|scala))\s*$', re.MULTILINE)
+    filename_pattern = re.compile(get_filename_pattern_string(), re.MULTILINE)
 
     # Split into code blocks by ``` fences
     parts = re.split(r'```', response_text)
@@ -215,14 +219,17 @@ def parse_code_blocks(response_text: str) -> list[dict]:
             continue
 
         # Check pattern 3: # filename.py
-        filename_match = filename_pattern.match(part)
+        # First strip the language line to search for filename in the rest
+        filename_match = filename_pattern.search(rest)
         if filename_match:
             filename = filename_match.group(1)
             path_hint = filename
             # Remove the filename line from content
-            filename_line_end = part.find('\n', filename_match.end())
+            filename_line_end = rest.find('\n', filename_match.end())
             if filename_line_end != -1:
-                content = part[filename_line_end + 1:]
+                content = rest[filename_line_end + 1:]
+            else:
+                content = rest[filename_match.end():]
             blocks.append({
                 "language": language,
                 "path_hint": path_hint,
@@ -436,7 +443,7 @@ def run_iteration(state: AgentState) -> bool:
     prompt = build_agent_prompt(state)
 
     # Call Grok
-    print(f"Calling Grok 4.20 (refactor mode)...", file=sys.stderr)
+    print("Calling Grok 4.20 (refactor mode)...", file=sys.stderr)
     try:
         response = call_grok(
             prompt=prompt,
@@ -463,7 +470,7 @@ def run_iteration(state: AgentState) -> bool:
     if state.verify_cmd and state.apply:
         success, output = verify_changes(state)
         if success:
-            print(f"[VERIFY] Passed", file=sys.stderr)
+            print("[VERIFY] Passed", file=sys.stderr)
         else:
             state.errors.append(f"Verification failed: {output[:500]}")
             print(f"[VERIFY] Failed: {output[:500]}", file=sys.stderr)
@@ -485,7 +492,7 @@ def run_iteration(state: AgentState) -> bool:
 
 def run_agent_loop(state: AgentState) -> AgentState:
     """Run the full agent loop until completion or max iterations."""
-    print(f"[AGENT] Starting agent loop", file=sys.stderr)
+    print("[AGENT] Starting agent loop", file=sys.stderr)
     print(f"[AGENT] Task: {state.task}", file=sys.stderr)
     print(f"[AGENT] Target: {state.target}", file=sys.stderr)
     print(f"[AGENT] Apply mode: {state.apply}", file=sys.stderr)
@@ -601,7 +608,7 @@ Examples:
             print(f"✗ Failed: {result.errors[0] if result.errors else 'Unknown error'}")
     else:
         # Preview mode
-        print(f"\n[PREVIEW MODE] Re-run with --apply to actually write changes")
+        print("\n[PREVIEW MODE] Re-run with --apply to actually write changes")
 
     sys.exit(0 if result.status == AgentStatus.SUCCESS else 1)
 

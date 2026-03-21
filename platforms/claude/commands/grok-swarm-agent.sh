@@ -11,7 +11,7 @@ AGENT_SCRIPT="$PLUGIN_ROOT/src/agent/grok_agent.py"
 
 # Default: preview mode
 APPLY_FLAG=""
-MAX_ITERATIONS="--max-iterations 5"
+MAX_ITERATIONS="5"
 VERIFY_CMD=""
 TARGET="."
 
@@ -28,16 +28,17 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --max-iterations)
-            MAX_ITERATIONS="--max-iterations $2"
+            MAX_ITERATIONS="$2"
             shift 2
             ;;
         --verify-cmd)
-            VERIFY_CMD="--verify-cmd \"$2\""
+            VERIFY_CMD="$2"
             shift 2
             ;;
         -*)
-            # Pass through unknown flags
-            shift
+            echo "Unknown option: $1" >&2
+            echo "Usage: grok-swarm-agent [task description] [--apply] [--target DIR] [--max-iterations N] [--verify-cmd CMD]" >&2
+            exit 1
             ;;
         *)
             # First non-flag is the task
@@ -58,8 +59,23 @@ if [[ -z "$TASK" ]]; then
     exit 1
 fi
 
-# Build command
-CMD="python3 \"$AGENT_SCRIPT\" --platform claude --target \"$TARGET\" $APPLY_FLAG $MAX_ITERATIONS $VERIFY_CMD \"$TASK\""
+# Build argument array
+ARGS=(
+    "$AGENT_SCRIPT"
+    "--platform" "claude"
+    "--target" "$TARGET"
+    "--max-iterations" "$MAX_ITERATIONS"
+)
+
+if [[ -n "$APPLY_FLAG" ]]; then
+    ARGS+=("$APPLY_FLAG")
+fi
+
+if [[ -n "$VERIFY_CMD" ]]; then
+    ARGS+=("--verify-cmd" "$VERIFY_CMD")
+fi
+
+ARGS+=("$TASK")
 
 # Execute
-eval $CMD
+python3 "${ARGS[@]}"
