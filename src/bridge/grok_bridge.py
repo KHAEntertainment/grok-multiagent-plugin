@@ -25,6 +25,11 @@ except ImportError:
     print("ERROR: openai package required. Install: pip3 install openai", file=sys.stderr)
     sys.exit(1)
 
+try:
+    from usage_tracker import record_usage as _record_usage
+except ImportError:
+    _record_usage = None
+
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 MODEL_ID = "x-ai/grok-4.20-multi-agent-beta"
@@ -355,6 +360,18 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
         print(f"USAGE: mode={mode} thinking={thinking} agents={agent_count} "
               f"prompt={u.prompt_tokens} completion={u.completion_tokens} "
               f"total={u.total_tokens} time={elapsed:.1f}s", file=sys.stderr)
+        if _record_usage is not None:
+            try:
+                _record_usage(
+                    mode=mode,
+                    thinking=thinking,
+                    prompt_tokens=u.prompt_tokens,
+                    completion_tokens=u.completion_tokens,
+                    total_tokens=u.total_tokens,
+                    elapsed_secs=elapsed,
+                )
+            except Exception:
+                pass
 
     # Handle content filtering
     if choice.finish_reason == "content_filter":

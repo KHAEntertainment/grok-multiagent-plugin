@@ -23,6 +23,7 @@ if str(current) not in sys.path:
     sys.path.insert(0, str(current))
 
 from grok_bridge import call_grok, read_files, MODE_PROMPTS
+from usage_tracker import get_stats, format_stats_report
 
 
 def check_morph_available():
@@ -131,7 +132,23 @@ def parse_and_write(result_text, output_dir, dry_run=True):
     return format_summary(result, output_dir)
 
 
+def _handle_stats(argv):
+    """Handle `grok-swarm stats [--days N]` subcommand."""
+    import argparse as _ap
+    p = _ap.ArgumentParser(prog="grok-swarm stats", description="Show token/cost usage statistics")
+    p.add_argument("--days", "-d", type=int, default=None,
+                   metavar="N", help="Limit to last N days (default: all time)")
+    args = p.parse_args(argv)
+    stats = get_stats(since_days=args.days)
+    print(format_stats_report(stats, since_days=args.days))
+
+
 def main():
+    # Dispatch stats subcommand before full argument parsing
+    if len(sys.argv) > 1 and sys.argv[1] == "stats":
+        _handle_stats(sys.argv[2:])
+        return
+
     parser = argparse.ArgumentParser(
         description="Grok Swarm — Multi-agent CLI powered by Grok 4.20",
         formatter_class=argparse.RawDescriptionHelpFormatter,
