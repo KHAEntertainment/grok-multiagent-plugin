@@ -40,6 +40,7 @@ Grok Swarm is a dual-platform OpenClaw + Claude Code integration that bridges to
 - [x] Package as NPM module (`@khaentertainment/grok-swarm`)
 - [x] Package as ClawHub skill
 - [x] Package as Claude Code Marketplace Plugin (via GitHub Repo)
+- [x] GitHub Actions workflow for npm auto-publish on tag push
 - [ ] Test new packages/install methods
 - [ ] Verify ClawHub install flow works end-to-end
 - [ ] Verify Claude Code marketplace install flow works end-to-end
@@ -125,26 +126,26 @@ grok-multiagent-plugin/
 
 ## Install Methods
 
-### Current (Manual)
-```bash
-git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
-cd grok-multiagent-plugin
-./install.sh
-```
-
-### Planned (NPM)
+### NPM
 ```bash
 npm install @openclaw/grok-swarm
 ```
 
-### Planned (ClawHub)
+### Claude Code Marketplace
+```
+/plugin install grok-swarm@khaentertainment
+```
+
+### ClawHub
 ```bash
 clawhub install grok-swarm
 ```
 
-### Planned (Claude Code Marketplace)
-```
-/install-plugin KHAEntertainment/grok-multiagent-plugin
+### Manual / Git Clone
+```bash
+git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
+cd grok-multiagent-plugin
+./install.sh
 ```
 
 ---
@@ -154,6 +155,30 @@ clawhub install grok-swarm
 - **Runtime:** Python 3.8+, Node.js 18+
 - **API:** OpenRouter API key with Grok 4.20 access
 - **Optional:** Morph LLM MCP for partial file edits
+
+---
+
+## Release Process
+
+### Versioning
+This project follows semver. Version is maintained in:
+- `package.json` (`version` field)
+- `platforms/claude/.claude-plugin/plugin.json` (`version` field)
+- `skills/grok-refactor/openclaw.plugin.json` (`version` field)
+
+### Publishing (NPM)
+
+1. **Bump version** in all three files above
+2. **Create a git tag**: `git tag v1.3.0 && git push origin v1.3.0`
+3. GitHub Actions automatically publishes to npm
+
+The `NPM_SECRET` secret must be set in the repo (GitHub → Settings → Secrets).
+
+### Claude Code Marketplace
+Updates via git tag + GitHub repo updates. Claude Code plugins are installed directly from the repo URL.
+
+### OpenClaw (ClawHub)
+Use `clawhub publish` or the ClawHub CLI after npm publish.
 
 ---
 
