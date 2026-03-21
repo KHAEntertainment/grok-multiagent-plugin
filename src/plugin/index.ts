@@ -213,4 +213,8 @@ export default function (api: any) {
     },
     { optional: true },
   );
+
+  // Register autonomous agent tool
+  const { default: registerAgent } = await import("./grok_agent_plugin.js");
+  registerAgent(api);
 }

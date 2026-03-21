@@ -30,6 +30,14 @@ try:
 except ImportError:
     _record_usage = None
 
+_shared_dir = str(Path(__file__).parent.parent / "shared")
+if _shared_dir not in sys.path:
+    sys.path.insert(0, _shared_dir)
+try:
+    from patterns import get_filename_pattern_string as _get_filename_pattern_string
+except ImportError:
+    _get_filename_pattern_string = None
+
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 MODEL_ID = "x-ai/grok-4.20-multi-agent-beta"
@@ -243,10 +251,16 @@ def parse_and_write_files(response_text, output_dir):
     written = []
     output_path = Path(output_dir)
     
-    # Pattern for lang:path at start of block (language tag contains path)
+    # Pattern 1: lang:path at start of block (relative OR absolute path)
     lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
-    # Pattern for // FILE: or # FILE: markers
+    # Pattern 2: // FILE: or # FILE: markers inside the block
     file_marker_pattern = re.compile(r'^\s*(?://|#)\s*FILE:\s*(.+?)\s*$', re.MULTILINE)
+    # Pattern 3: bare '# filename.ext' as first line (common Grok output)
+    filename_pattern = (
+        re.compile(_get_filename_pattern_string(), re.MULTILINE)
+        if _get_filename_pattern_string is not None
+        else None
+    )
     
     def _write_file(file_path, content):
         """Validate path, write content, and record result. Returns True on success."""
@@ -281,7 +295,20 @@ def parse_and_write_files(response_text, output_dir):
         marker_match = file_marker_pattern.search(part)
         if marker_match:
             _write_file(marker_match.group(1).strip(), part[marker_match.end():])
-    
+            continue
+
+        # Pattern 3: bare '# filename.ext' as first non-empty line
+        if filename_pattern is not None:
+            # Strip the language tag line if present, then check first content line
+            content_start = part.find('\n')
+            first_line_end = part.find('\n', content_start + 1) if content_start >= 0 else -1
+            first_content = part[content_start + 1:first_line_end].strip() if content_start >= 0 else ""
+            fn_match = filename_pattern.match(first_content)
+            if fn_match:
+                filename = fn_match.group(1)
+                rest = part[first_line_end + 1:] if first_line_end >= 0 else ""
+                _write_file(filename, rest)
+
     return written
 
 def detect_high_thinking(prompt):
