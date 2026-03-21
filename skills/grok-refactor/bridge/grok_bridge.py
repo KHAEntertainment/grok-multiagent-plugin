@@ -25,9 +25,67 @@ except ImportError:
     print("ERROR: openai package required. Install: pip3 install openai", file=sys.stderr)
     sys.exit(1)
 
+try:
+    from usage_tracker import record_usage as _record_usage
+except ImportError:
+    _record_usage = None
+
+_shared_dir = str(Path(__file__).parent.parent / "shared")
+if _shared_dir not in sys.path:
+    sys.path.insert(0, _shared_dir)
+try:
+    from patterns import get_filename_pattern_string as _get_filename_pattern_string
+except ImportError:
+    _get_filename_pattern_string = None
+
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
 MODEL_ID = "x-ai/grok-4.20-multi-agent-beta"
+
+# Agent counts per thinking level
+AGENT_COUNTS = {
+    "low": 4,
+    "high": 16,
+}
+
+# Plain-language phrases that trigger High Thinking mode automatically
+HIGH_THINKING_PHRASES = [
+    "16 agent swarm",
+    "16-agent swarm",
+    "high thinking",
+    "high thinking mode",
+    "thinking mode high",
+    "--thinking high",
+]
+
+# Default grounding prompt prepended to every mode-specific system prompt.
+# Users can override this by creating ~/.config/grok-swarm/system-prompt.txt
+DEFAULT_GROUNDING_PROMPT = (
+    "You are Grok, a specialized agentic coding assistant powered by xAI's multi-agent swarm. "
+    "Your primary role is to help software engineers write, analyze, refactor, and debug code. "
+    "You have access to a large context window and collaborate with multiple parallel agents to "
+    "produce thorough, well-reasoned results. Always produce production-quality output: "
+    "correct, readable, and idiomatic for the target language. "
+    "When modifying files, annotate every code block with its file path so changes can be "
+    "applied automatically."
+)
+
+
+def load_grounding_prompt():
+    """
+    Return the user's custom grounding prompt from
+    ~/.config/grok-swarm/system-prompt.txt, or DEFAULT_GROUNDING_PROMPT.
+    """
+    custom = Path.home() / ".config" / "grok-swarm" / "system-prompt.txt"
+    if custom.exists():
+        try:
+            text = custom.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+        except OSError:
+            pass
+    return DEFAULT_GROUNDING_PROMPT
+
 
 # Mode-specific system prompts
 MODE_PROMPTS = {
@@ -151,11 +209,20 @@ def _safe_dest(output_path, file_path):
     """
     Resolve ``file_path`` relative to ``output_path`` and verify the result
     stays inside ``output_path``.  Returns the resolved Path or raises
-    ValueError for unsafe paths (absolute, containing ``..``, etc.).
+    ValueError for unsafe paths (containing ``..``, etc.).
+
+    Absolute paths are rebased under ``output_path`` using only the filename
+    component (e.g. ``/home/user/.sandbox/task.py`` → ``<output>/task.py``),
+    and a warning is printed to stderr.
     """
     raw = Path(file_path)
     if raw.is_absolute():
-        raise ValueError(f"Absolute paths are not allowed: {file_path!r}")
+        rebased = Path(raw.name)
+        print(
+            f"WARNING: Absolute path rebased to output dir: {file_path!r} → {rebased!r}",
+            file=sys.stderr,
+        )
+        raw = rebased
     if ".." in raw.parts:
         raise ValueError(f"Path traversal not allowed: {file_path!r}")
     dest = (output_path / raw).resolve()
@@ -184,10 +251,16 @@ def parse_and_write_files(response_text, output_dir):
     written = []
     output_path = Path(output_dir)
     
-    # Pattern for lang:path at start of block (language tag contains path)
+    # Pattern 1: lang:path at start of block (relative OR absolute path)
     lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
-    # Pattern for // FILE: or # FILE: markers
+    # Pattern 2: // FILE: or # FILE: markers inside the block
     file_marker_pattern = re.compile(r'^\s*(?://|#)\s*FILE:\s*(.+?)\s*$', re.MULTILINE)
+    # Pattern 3: bare '# filename.ext' as first line (common Grok output)
+    filename_pattern = (
+        re.compile(_get_filename_pattern_string(), re.MULTILINE)
+        if _get_filename_pattern_string is not None
+        else None
+    )
     
     def _write_file(file_path, content):
         """Validate path, write content, and record result. Returns True on success."""
@@ -222,10 +295,29 @@ def parse_and_write_files(response_text, output_dir):
         marker_match = file_marker_pattern.search(part)
         if marker_match:
             _write_file(marker_match.group(1).strip(), part[marker_match.end():])
-    
+            continue
+
+        # Pattern 3: bare '# filename.ext' as first non-empty line
+        if filename_pattern is not None:
+            # Strip the language tag line if present, then check first content line
+            content_start = part.find('\n')
+            first_line_end = part.find('\n', content_start + 1) if content_start >= 0 else -1
+            first_content = part[content_start + 1:first_line_end].strip() if content_start >= 0 else ""
+            fn_match = filename_pattern.match(first_content)
+            if fn_match:
+                filename = fn_match.group(1)
+                rest = part[first_line_end + 1:] if first_line_end >= 0 else ""
+                _write_file(filename, rest)
+
     return written
 
-def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120):
+def detect_high_thinking(prompt):
+    """Return True if the prompt contains a plain-language High Thinking trigger."""
+    lower = prompt.lower()
+    return any(phrase in lower for phrase in HIGH_THINKING_PHRASES)
+
+
+def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120, thinking="low"):
     """Make the API call to Grok 4.20 Multi-Agent Beta."""
     api_key = get_api_key()
     if not api_key:
@@ -235,12 +327,15 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
 
     # Resolve system prompt
     if system_override:
+        # orchestrate mode: user owns the full system prompt, skip grounding
         system_content = system_override
     else:
-        system_content = MODE_PROMPTS.get(mode)
-        if system_content is None:
+        mode_prompt = MODE_PROMPTS.get(mode)
+        if mode_prompt is None:
             print(f"ERROR: Mode '{mode}' requires --system flag", file=sys.stderr)
             sys.exit(1)
+        grounding = load_grounding_prompt()
+        system_content = grounding + "\n\n" + mode_prompt
 
     # Append context to system prompt
     if context:
@@ -262,7 +357,7 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
         "messages": messages,
         "max_tokens": 16384,
         "temperature": 0.3,
-        "extra_body": {"agent_count": 4},
+        "extra_body": {"agent_count": AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])},
     }
 
     if tools:
@@ -288,8 +383,22 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
     # Log usage
     if hasattr(response, 'usage') and response.usage:
         u = response.usage
-        print(f"USAGE: mode={mode} prompt={u.prompt_tokens} completion={u.completion_tokens} "
+        agent_count = AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])
+        print(f"USAGE: mode={mode} thinking={thinking} agents={agent_count} "
+              f"prompt={u.prompt_tokens} completion={u.completion_tokens} "
               f"total={u.total_tokens} time={elapsed:.1f}s", file=sys.stderr)
+        if _record_usage is not None:
+            try:
+                _record_usage(
+                    mode=mode,
+                    thinking=thinking,
+                    prompt_tokens=u.prompt_tokens,
+                    completion_tokens=u.completion_tokens,
+                    total_tokens=u.total_tokens,
+                    elapsed_secs=elapsed,
+                )
+            except Exception:
+                pass
 
     # Handle content filtering
     if choice.finish_reason == "content_filter":
@@ -337,8 +446,19 @@ def main():
                         help="Parse response for annotated code blocks and write to --output-dir")
     parser.add_argument("--output-dir", default="./grok-output/",
                         help="Directory for file writes (default: ./grok-output/)")
+    parser.add_argument("--thinking", default=None, choices=["low", "high"],
+                        help="Thinking level: low (4 agents) or high (16 agents, High Thinking mode) (default: low)")
 
     args = parser.parse_args()
+
+    # Auto-detect High Thinking mode from plain language in prompt (only if not explicitly set)
+    thinking = args.thinking
+    if thinking is None:
+        if detect_high_thinking(args.prompt):
+            thinking = "high"
+            print("INFO: High Thinking mode detected from prompt — using 16-agent swarm", file=sys.stderr)
+        else:
+            thinking = "low"
 
     # Validate orchestrate mode
     if args.mode == "orchestrate" and not args.system:
@@ -356,7 +476,9 @@ def main():
     tools = load_tools(args.tools)
 
     # Call Grok
-    print(f"Calling {MODEL_ID} (mode={args.mode}, 4 agents, timeout={args.timeout}s)...", file=sys.stderr)
+    agent_count = AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])
+    thinking_label = " [HIGH THINKING MODE — 16-agent swarm]" if thinking == "high" else ""
+    print(f"Calling {MODEL_ID} (mode={args.mode}, {agent_count} agents, timeout={args.timeout}s){thinking_label}...", file=sys.stderr)
     result = call_grok(
         prompt=args.prompt,
         mode=args.mode,
@@ -364,6 +486,7 @@ def main():
         system_override=args.system,
         tools=tools,
         timeout=args.timeout,
+        thinking=thinking,
     )
 
     # Output
@@ -380,11 +503,18 @@ def main():
                 print(f"  {rel_path} ({byte_count:,} bytes)")
             print(f"Total: {total_bytes:,} bytes")
         else:
+            # Save full response as a fallback so no output is lost
+            fallback_dir = Path(args.output_dir)
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            fallback_path = fallback_dir / "grok-response.txt"
+            fallback_path.write_text(result, encoding="utf-8")
             print(
-                "No annotated files found in model response to write to disk.\n"
-                "Re-run without --write-files to see the full response.",
+                f"ERROR: No annotated files found in model response.\n"
+                f"Full response saved to: {fallback_path}\n"
+                f"Tip: ask Grok to annotate code blocks with  ```lang:path/to/file  or  # FILE: path/to/file",
                 file=sys.stderr,
             )
+            sys.exit(1)
     elif not args.output:
         print(result)
 

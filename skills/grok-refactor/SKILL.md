@@ -78,6 +78,25 @@ echo '{"api_key": "sk-or-v1-..."}' > ~/.config/grok-swarm/config.json
 chmod 600 ~/.config/grok-swarm/config.json
 ```
 
+## Grounding Prompt (optional)
+
+Grok's role and default behaviour can be customised by creating a plain-text file at `~/.config/grok-swarm/system-prompt.txt`. Its contents are prepended to every mode-specific system prompt. Leave the file absent to use the built-in default.
+
+```bash
+cat > ~/.config/grok-swarm/system-prompt.txt <<'EOF'
+You are Grok, a senior engineer focused on security and correctness above all else.
+EOF
+```
+
+## Usage Stats
+
+Track token spend across sessions:
+
+```bash
+grok-swarm stats          # all-time totals
+grok-swarm stats --days 7 # last 7 days
+```
+
 ## Installation
 
 ```bash
