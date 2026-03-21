@@ -170,25 +170,43 @@ def _safe_dest(output_path, file_path):
 def parse_and_write_files(response_text, output_dir):
     """
     Scan response for fenced code blocks with filename annotations and write to disk.
-    
-    Supports patterns:
-      ```lang:path/to/file ... ```
-      ```lang
-      // FILE: path/to/file
-      ...
-      ```
-    
+
+    Supports multiple annotation formats:
+      ```python:/path/to/file.py ... ```  (lang:/path format)
+      ```python
+      // FILE: /path/to/file.py
+      ... content ...
+      ```  (C-style comment marker)
+      ```python
+      # FILE: /path/to/file.py
+      ... content ...
+      ```  (Python-style comment marker)
+      ```python
+      # filename.py
+      ... content ...
+      ```  (Just filename as comment - common Grok output)
+
     Returns list of (relative_path, byte_count) tuples written, where
     byte_count is the number of UTF-8 bytes written.
     """
     written = []
     output_path = Path(output_dir)
-    
-    # Pattern for lang:path at start of block (language tag contains path)
-    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
-    # Pattern for // FILE: or # FILE: markers
-    file_marker_pattern = re.compile(r'^\s*(?://|#)\s*FILE:\s*(.+?)\s*$', re.MULTILINE)
-    
+
+    # Pattern 1: lang:/path/to/file (language tag contains path)
+    lang_path_pattern = re.compile(r'^(\w+):(/[^\s\n]+(?:/[^\s\n]+)*)\n', re.MULTILINE)
+
+    # Pattern 2: // FILE: /path or # FILE: /path
+    file_marker_pattern = re.compile(
+        r'^\s*(?:(?://|#)\s*)FILE:\s*(.+?)\s*$',
+        re.MULTILINE
+    )
+
+    # Pattern 3: # filename.py (just filename as first line - common Grok output)
+    filename_pattern = re.compile(
+        r'^\s*#\s*([a-zA-Z_][a-zA-Z0-9_]*\.(?:py|js|ts|jsx|tsx|go|rs|java|c|cpp|h|hpp|cs|rb|php|swift|kt|scala|sh|bash))\s*$',
+        re.MULTILINE
+    )
+
     def _write_file(file_path, content):
         """Validate path, write content, and record result. Returns True on success."""
         try:
@@ -206,23 +224,44 @@ def parse_and_write_files(response_text, output_dir):
     # Even indices are fence markers or text between fences; skip them.
     # Odd indices are the actual code block contents.
     parts = re.split(r'```', response_text)
-    
+
     for i, part in enumerate(parts):
         if i % 2 == 0:
             # Skip even-indexed parts (fences/text between fences)
             continue
-        
-        # Check for lang:path at start (language tag contains the path)
+
+        # Check for lang:/path at start (language tag contains the path)
         lang_match = lang_path_pattern.match(part)
         if lang_match:
             _write_file(lang_match.group(2), part[lang_match.end():])
             continue
-        
+
         # Check for // FILE: or # FILE: marker within the block
         marker_match = file_marker_pattern.search(part)
         if marker_match:
-            _write_file(marker_match.group(1).strip(), part[marker_match.end():])
-    
+            path = marker_match.group(1).strip()
+            # Remove the marker line from content
+            marker_end = part.find('\n', marker_match.start())
+            if marker_end != -1:
+                content = part[marker_end + 1:]
+            else:
+                content = ""
+            _write_file(path, content)
+            continue
+
+        # Check for # filename.py pattern (common Grok output)
+        filename_match = filename_pattern.match(part)
+        if filename_match:
+            filename = filename_match.group(1)
+            # Remove the filename line from content
+            filename_end = part.find('\n', filename_match.end())
+            if filename_end != -1:
+                content = part[filename_end + 1:]
+            else:
+                content = ""
+            _write_file(filename, content)
+            continue
+
     return written
 
 def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120):
