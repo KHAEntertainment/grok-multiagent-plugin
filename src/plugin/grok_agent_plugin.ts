@@ -33,6 +33,9 @@ const GrokAgentSchema = Type.Object({
   verify_cmd: Type.Optional(
     Type.String({ description: "Command to run for verification (e.g., pytest)" }),
   ),
+  output_dir: Type.Optional(
+    Type.String({ description: "Output directory for new files" }),
+  ),
 });
 
 export default function (api: any) {
@@ -82,6 +85,10 @@ export default function (api: any) {
 
           if (params.verify_cmd) {
             args.push("--verify-cmd", params.verify_cmd);
+          }
+
+          if (params.output_dir) {
+            args.push("--output-dir", params.output_dir);
           }
 
           args.push("--", params.task);
