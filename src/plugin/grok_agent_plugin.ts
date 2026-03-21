@@ -18,6 +18,7 @@ import { Type } from "@sinclair/typebox";
 
 const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const DEFAULT_AGENT = join(PLUGIN_ROOT, "src", "agent", "grok_agent.py");
+const DEFAULT_PYTHON = join(PLUGIN_ROOT, "skills", "grok-refactor", ".venv", "bin", "python3");
 
 const GrokAgentSchema = Type.Object({
   task: Type.String({ description: "Natural language task instruction" }),
@@ -57,6 +58,7 @@ export default function (api: any) {
 
         try {
           const agentScript = api.config?.agentScript || DEFAULT_AGENT;
+          const pythonPath = api.config?.pythonPath || DEFAULT_PYTHON;
 
           // Validate agent script exists
           if (!existsSync(agentScript)) {
@@ -88,7 +90,7 @@ export default function (api: any) {
 
           // Spawn agent with timeout enforcement
           return new Promise((resolve) => {
-            const child = spawn("python3", args, {
+            const child = spawn(pythonPath, args, {
               stdio: ["ignore", "pipe", "pipe"],
               env: { ...process.env },
             });
