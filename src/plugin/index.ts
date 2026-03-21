@@ -10,10 +10,11 @@
 import { spawn } from "child_process";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 import { Type } from "@sinclair/typebox";
 
 const SKILL_DIR = join(
-  dirname(new URL(import.meta.url).pathname),
+  dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
   "..",
