@@ -73,6 +73,55 @@ class AgentState:
 
 
 # =============================================================================
+# Path Sanitization
+# =============================================================================
+
+def sanitize_target_path(path_hint: str, base_root: str) -> Path:
+    """
+    Sanitize a path hint to prevent directory traversal and absolute path attacks.
+
+    Args:
+        path_hint: The path provided by the LLM (should be relative)
+        base_root: The base directory to write to (target or output_dir)
+
+    Returns:
+        A safe resolved Path within base_root
+
+    Raises:
+        ValueError: If the path is unsafe (absolute, escapes root, etc.)
+    """
+    # Reject or strip leading "/" and "~"
+    hint = path_hint.strip()
+    if hint.startswith("/"):
+        hint = hint.lstrip("/")
+    if hint.startswith("~"):
+        raise ValueError(f"Cannot use home directory paths: {path_hint}")
+
+    # Convert to Path and check for absolute
+    raw_path = Path(hint)
+    if raw_path.is_absolute():
+        raise ValueError(f"Cannot use absolute paths: {path_hint}")
+
+    # Get the base root and resolve it
+    root = Path(base_root)
+    if root.is_file():
+        # If target is a file, use its parent as root
+        root = root.parent
+    root = root.resolve()
+
+    # Build the target path and resolve it
+    target_path = (root / raw_path).resolve()
+
+    # Check if resolved path is within the root
+    try:
+        target_path.relative_to(root)
+    except ValueError:
+        raise ValueError(f"Path escapes target directory: {path_hint} -> {target_path}")
+
+    return target_path
+
+
+# =============================================================================
 # File Discovery
 # =============================================================================
 
@@ -203,13 +252,21 @@ def parse_code_blocks(response_text: str) -> list[dict]:
             continue
 
         # Check pattern 2: // FILE: or # FILE:
-        marker_match = file_marker_pattern.search(part)
+        # Only search the first non-empty line of rest
+        rest_lines = rest.split('\n')
+        first_non_lang_line = ""
+        first_line_idx = 0
+        for idx, line in enumerate(rest_lines):
+            if line.strip():
+                first_non_lang_line = line
+                first_line_idx = idx
+                break
+
+        marker_match = file_marker_pattern.search(first_non_lang_line) if first_non_lang_line else None
         if marker_match:
             path_hint = marker_match.group(1).strip()
             # Remove the marker line from content
-            marker_line_end = part.find('\n', marker_match.start())
-            if marker_line_end != -1:
-                content = part[marker_line_end + 1:]
+            content = '\n'.join(rest_lines[first_line_idx + 1:])
             blocks.append({
                 "language": language,
                 "path_hint": path_hint,
@@ -219,17 +276,13 @@ def parse_code_blocks(response_text: str) -> list[dict]:
             continue
 
         # Check pattern 3: # filename.py
-        # First strip the language line to search for filename in the rest
-        filename_match = filename_pattern.search(rest)
+        # Only search the first non-empty line of rest
+        filename_match = filename_pattern.search(first_non_lang_line) if first_non_lang_line else None
         if filename_match:
             filename = filename_match.group(1)
             path_hint = filename
             # Remove the filename line from content
-            filename_line_end = rest.find('\n', filename_match.end())
-            if filename_line_end != -1:
-                content = rest[filename_line_end + 1:]
-            else:
-                content = rest[filename_match.end():]
+            content = '\n'.join(rest_lines[first_line_idx + 1:])
             blocks.append({
                 "language": language,
                 "path_hint": path_hint,
@@ -258,18 +311,15 @@ def parse_and_write_files(response_text: str, output_dir: str) -> list[tuple]:
         if not path_hint or not content:
             continue
 
-        # Validate path - no absolute paths, no traversal
-        raw = Path(path_hint)
-        if raw.is_absolute() or ".." in raw.parts:
-            print(f"WARNING: Skipping unsafe path: {path_hint}", file=sys.stderr)
-            continue
-
-        dest = output_path / raw
+        # Sanitize path
         try:
+            dest = sanitize_target_path(path_hint, output_dir)
             dest.parent.mkdir(parents=True, exist_ok=True)
             encoded = content.strip().encode("utf-8", errors="replace")
             dest.write_bytes(encoded)
-            written.append((str(raw), len(encoded)))
+            written.append((str(Path(path_hint)), len(encoded)))
+        except ValueError as e:
+            print(f"WARNING: Skipping unsafe path: {e}", file=sys.stderr)
         except Exception as e:
             print(f"WARNING: Failed to write {path_hint}: {e}", file=sys.stderr)
 
@@ -332,15 +382,22 @@ def apply_changes_from_response(state: AgentState, response: str) -> list[str]:
             else:
                 continue
 
-        # Apply in target directory
-        target_path = Path(state.target) / path_hint if path_hint else None
-        if target_path and state.apply:
-            success = apply_file_change(str(target_path), content, dry_run=False)
-            if success:
+        # Sanitize and apply in target directory
+        try:
+            # Use output_dir if provided, otherwise use target
+            base_root = state.output_dir if state.output_dir else state.target
+            target_path = sanitize_target_path(path_hint, base_root)
+
+            if state.apply:
+                success = apply_file_change(str(target_path), content, dry_run=False)
+                if success:
+                    applied.append(str(target_path))
+            else:
+                apply_file_change(str(target_path), content, dry_run=True)
                 applied.append(str(target_path))
-        elif target_path:
-            apply_file_change(str(target_path), content, dry_run=True)
-            applied.append(str(target_path))
+        except ValueError as e:
+            print(f"[ERROR] Skipping unsafe path: {e}", file=sys.stderr)
+            continue
 
     return applied
 
@@ -467,8 +524,10 @@ def run_iteration(state: AgentState) -> bool:
         print(f"[PREVIEW] Would modify {len(blocks)} blocks", file=sys.stderr)
 
     # Verify if command provided
+    verification_succeeded = True  # Default to True if no verification
     if state.verify_cmd and state.apply:
         success, output = verify_changes(state)
+        verification_succeeded = success
         if success:
             print("[VERIFY] Passed", file=sys.stderr)
         else:
@@ -476,10 +535,10 @@ def run_iteration(state: AgentState) -> bool:
             print(f"[VERIFY] Failed: {output[:500]}", file=sys.stderr)
             # Continue anyway - Grok can fix in next iteration
 
-    # Check if done
+    # Check if done - but only if verification passed
     response_lower = response.lower()
     done_markers = ["done", "complete", "finished", "all changes made", "successfully"]
-    if any(marker in response_lower for marker in done_markers):
+    if verification_succeeded and any(marker in response_lower for marker in done_markers):
         return True
 
     # Check if no changes were made
@@ -556,7 +615,8 @@ Examples:
                        help="Command to run for verification (e.g., pytest)")
     parser.add_argument("--output-dir",
                        help="Output directory for new files")
-    parser.add_argument("task", help="Natural language task instruction")
+    parser.add_argument("--task", "-t", required=True, dest="task",
+                       help="Natural language task instruction")
 
     args = parser.parse_args()
 
