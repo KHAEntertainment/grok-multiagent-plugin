@@ -1,7 +1,7 @@
 {
   "id": "grok-swarm",
   "name": "Grok Multi-Agent Swarm",
-  "description": "Bridge to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm) for codebase analysis, refactoring, reasoning, and code generation.",
+  "description": "Bridge to xAI Grok 4.20 Multi-Agent Beta (4-agent swarm) for codebase analysis, refactoring, reasoning, and code generation. Also supports autonomous agent mode for iterative multi-file modifications.",
   "version": "1.0.0",
   "configSchema": {
     "type": "object",
@@ -18,6 +18,10 @@
       "bridgeScript": {
         "type": "string",
         "description": "Path to grok_bridge.py script"
+      },
+      "agentScript": {
+        "type": "string",
+        "description": "Path to grok_agent.py script (for autonomous agent mode)"
       },
       "defaultOutputDir": {
         "type": "string",

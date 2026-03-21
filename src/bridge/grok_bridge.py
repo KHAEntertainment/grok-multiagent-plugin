@@ -19,24 +19,15 @@ import sys
 import time
 from pathlib import Path
 
+# Import shared patterns
+sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
+from patterns import get_filename_pattern_string
+
 try:
     from openai import OpenAI
 except ImportError:
     print("ERROR: openai package required. Install: pip3 install openai", file=sys.stderr)
     sys.exit(1)
-
-try:
-    from usage_tracker import record_usage as _record_usage
-except ImportError:
-    _record_usage = None
-
-_shared_dir = str(Path(__file__).parent.parent / "shared")
-if _shared_dir not in sys.path:
-    sys.path.insert(0, _shared_dir)
-try:
-    from patterns import get_filename_pattern_string as _get_filename_pattern_string
-except ImportError:
-    _get_filename_pattern_string = None
 
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
@@ -57,35 +48,6 @@ HIGH_THINKING_PHRASES = [
     "thinking mode high",
     "--thinking high",
 ]
-
-# Default grounding prompt prepended to every mode-specific system prompt.
-# Users can override this by creating ~/.config/grok-swarm/system-prompt.txt
-DEFAULT_GROUNDING_PROMPT = (
-    "You are Grok, a specialized agentic coding assistant powered by xAI's multi-agent swarm. "
-    "Your primary role is to help software engineers write, analyze, refactor, and debug code. "
-    "You have access to a large context window and collaborate with multiple parallel agents to "
-    "produce thorough, well-reasoned results. Always produce production-quality output: "
-    "correct, readable, and idiomatic for the target language. "
-    "When modifying files, annotate every code block with its file path so changes can be "
-    "applied automatically."
-)
-
-
-def load_grounding_prompt():
-    """
-    Return the user's custom grounding prompt from
-    ~/.config/grok-swarm/system-prompt.txt, or DEFAULT_GROUNDING_PROMPT.
-    """
-    custom = Path.home() / ".config" / "grok-swarm" / "system-prompt.txt"
-    if custom.exists():
-        try:
-            text = custom.read_text(encoding="utf-8").strip()
-            if text:
-                return text
-        except OSError:
-            pass
-    return DEFAULT_GROUNDING_PROMPT
-
 
 # Mode-specific system prompts
 MODE_PROMPTS = {
@@ -209,20 +171,11 @@ def _safe_dest(output_path, file_path):
     """
     Resolve ``file_path`` relative to ``output_path`` and verify the result
     stays inside ``output_path``.  Returns the resolved Path or raises
-    ValueError for unsafe paths (containing ``..``, etc.).
-
-    Absolute paths are rebased under ``output_path`` using only the filename
-    component (e.g. ``/home/user/.sandbox/task.py`` → ``<output>/task.py``),
-    and a warning is printed to stderr.
+    ValueError for unsafe paths (absolute, containing ``..``, etc.).
     """
     raw = Path(file_path)
     if raw.is_absolute():
-        rebased = Path(raw.name)
-        print(
-            f"WARNING: Absolute path rebased to output dir: {file_path!r} → {rebased!r}",
-            file=sys.stderr,
-        )
-        raw = rebased
+        raise ValueError(f"Absolute paths are not allowed: {file_path!r}")
     if ".." in raw.parts:
         raise ValueError(f"Path traversal not allowed: {file_path!r}")
     dest = (output_path / raw).resolve()
@@ -237,31 +190,43 @@ def _safe_dest(output_path, file_path):
 def parse_and_write_files(response_text, output_dir):
     """
     Scan response for fenced code blocks with filename annotations and write to disk.
-    
-    Supports patterns:
-      ```lang:path/to/file ... ```
-      ```lang
-      // FILE: path/to/file
-      ...
-      ```
-    
+
+    Supports multiple annotation formats:
+      ```python:/path/to/file.py ... ```  (lang:/path format)
+      ```python
+      // FILE: /path/to/file.py
+      ... content ...
+      ```  (C-style comment marker)
+      ```python
+      # FILE: /path/to/file.py
+      ... content ...
+      ```  (Python-style comment marker)
+      ```python
+      # filename.py
+      ... content ...
+      ```  (Just filename as comment - common Grok output)
+
     Returns list of (relative_path, byte_count) tuples written, where
     byte_count is the number of UTF-8 bytes written.
     """
     written = []
     output_path = Path(output_dir)
-    
-    # Pattern 1: lang:path at start of block (relative OR absolute path)
-    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
-    # Pattern 2: // FILE: or # FILE: markers inside the block
-    file_marker_pattern = re.compile(r'^\s*(?://|#)\s*FILE:\s*(.+?)\s*$', re.MULTILINE)
-    # Pattern 3: bare '# filename.ext' as first line (common Grok output)
-    filename_pattern = (
-        re.compile(_get_filename_pattern_string(), re.MULTILINE)
-        if _get_filename_pattern_string is not None
-        else None
+
+    # Pattern 1: lang:/path/to/file (language tag contains path)
+    lang_path_pattern = re.compile(r'^(\w+):(/[^\s\n]+(?:/[^\s\n]+)*)\n', re.MULTILINE)
+
+    # Pattern 2: // FILE: /path or # FILE: /path
+    file_marker_pattern = re.compile(
+        r'^\s*(?:(?://|#)\s*)FILE:\s*(.+?)\s*$',
+        re.MULTILINE
     )
-    
+
+    # Pattern 3: # filename.py (just filename as first line - common Grok output)
+    filename_pattern = re.compile(
+        get_filename_pattern_string(),
+        re.MULTILINE
+    )
+
     def _write_file(file_path, content):
         """Validate path, write content, and record result. Returns True on success."""
         try:
@@ -279,41 +244,43 @@ def parse_and_write_files(response_text, output_dir):
     # Even indices are fence markers or text between fences; skip them.
     # Odd indices are the actual code block contents.
     parts = re.split(r'```', response_text)
-    
+
     for i, part in enumerate(parts):
         if i % 2 == 0:
             # Skip even-indexed parts (fences/text between fences)
             continue
-        
-        # Check for lang:path at start (language tag contains the path)
+
+        # Check for lang:/path at start (language tag contains the path)
         lang_match = lang_path_pattern.match(part)
         if lang_match:
             _write_file(lang_match.group(2), part[lang_match.end():])
             continue
-        
+
         # Check for // FILE: or # FILE: marker within the block
         marker_match = file_marker_pattern.search(part)
         if marker_match:
-            _write_file(marker_match.group(1).strip(), part[marker_match.end():])
+            path = marker_match.group(1).strip()
+            # Remove the marker line from content
+            marker_end = part.find('\n', marker_match.start())
+            if marker_end != -1:
+                content = part[marker_end + 1:]
+            else:
+                content = ""
+            _write_file(path, content)
             continue
 
-        # Pattern 3: bare '# filename.ext' as first non-empty line
-        if filename_pattern is not None:
-            # Strip the language tag line if present, then scan for first non-empty content line
-            content_start = part.find('\n')
-            content = part[content_start + 1:] if content_start >= 0 else part
-            lines = content.splitlines(keepends=True)
-            for idx, line in enumerate(lines):
-                stripped = line.strip()
-                if not stripped:
-                    continue
-                fn_match = filename_pattern.match(stripped)
-                if fn_match:
-                    filename = fn_match.group(1)
-                    rest = "".join(lines[idx + 1:])
-                    _write_file(filename, rest)
-                # Only consider the first non-empty line for Pattern 3
-                break
+        # Check for # filename.py pattern (common Grok output)
+        filename_match = filename_pattern.match(part)
+        if filename_match:
+            filename = filename_match.group(1)
+            # Remove the filename line from content
+            filename_end = part.find('\n', filename_match.end())
+            if filename_end != -1:
+                content = part[filename_end + 1:]
+            else:
+                content = ""
+            _write_file(filename, content)
+            continue
 
     return written
 
@@ -333,15 +300,12 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
 
     # Resolve system prompt
     if system_override:
-        # orchestrate mode: user owns the full system prompt, skip grounding
         system_content = system_override
     else:
-        mode_prompt = MODE_PROMPTS.get(mode)
-        if mode_prompt is None:
+        system_content = MODE_PROMPTS.get(mode)
+        if system_content is None:
             print(f"ERROR: Mode '{mode}' requires --system flag", file=sys.stderr)
             sys.exit(1)
-        grounding = load_grounding_prompt()
-        system_content = grounding + "\n\n" + mode_prompt
 
     # Append context to system prompt
     if context:
@@ -393,18 +357,6 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
         print(f"USAGE: mode={mode} thinking={thinking} agents={agent_count} "
               f"prompt={u.prompt_tokens} completion={u.completion_tokens} "
               f"total={u.total_tokens} time={elapsed:.1f}s", file=sys.stderr)
-        if _record_usage is not None:
-            try:
-                _record_usage(
-                    mode=mode,
-                    thinking=thinking,
-                    prompt_tokens=u.prompt_tokens,
-                    completion_tokens=u.completion_tokens,
-                    total_tokens=u.total_tokens,
-                    elapsed_secs=elapsed,
-                )
-            except Exception:
-                pass
 
     # Handle content filtering
     if choice.finish_reason == "content_filter":
@@ -509,18 +461,11 @@ def main():
                 print(f"  {rel_path} ({byte_count:,} bytes)")
             print(f"Total: {total_bytes:,} bytes")
         else:
-            # Save full response as a fallback so no output is lost
-            fallback_dir = Path(args.output_dir)
-            fallback_dir.mkdir(parents=True, exist_ok=True)
-            fallback_path = fallback_dir / "grok-response.txt"
-            fallback_path.write_text(result, encoding="utf-8")
             print(
-                f"ERROR: No annotated files found in model response.\n"
-                f"Full response saved to: {fallback_path}\n"
-                f"Tip: ask Grok to annotate code blocks with  ```lang:path/to/file  or  # FILE: path/to/file",
+                "No annotated files found in model response to write to disk.\n"
+                "Re-run without --write-files to see the full response.",
                 file=sys.stderr,
             )
-            sys.exit(1)
     elif not args.output:
         print(result)
 

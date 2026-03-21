@@ -16,7 +16,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { Type } from "@sinclair/typebox";
 
-const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const DEFAULT_AGENT = join(PLUGIN_ROOT, "src", "agent", "grok_agent.py");
 
 const GrokAgentSchema = Type.Object({
@@ -56,7 +56,7 @@ export default function (api: any) {
         });
 
         try {
-          const agentScript = DEFAULT_AGENT;
+          const agentScript = api.config?.agentScript || DEFAULT_AGENT;
 
           // Validate agent script exists
           if (!existsSync(agentScript)) {
@@ -84,12 +84,11 @@ export default function (api: any) {
             args.push("--verify-cmd", params.verify_cmd);
           }
 
-          args.push("--task", params.task);
+          args.push("--", params.task);
 
           // Spawn agent with timeout enforcement
           return new Promise((resolve) => {
-            const pythonPath = api.config?.pythonPath || "python3";
-            const child = spawn(pythonPath, args, {
+            const child = spawn("python3", args, {
               stdio: ["ignore", "pipe", "pipe"],
               env: { ...process.env },
             });

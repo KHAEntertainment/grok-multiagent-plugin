@@ -1,1 +1,1 @@
-# grok-swarm shared utilities
+# shared package

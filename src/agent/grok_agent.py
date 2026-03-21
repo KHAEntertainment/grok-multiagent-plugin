@@ -21,7 +21,6 @@ Usage:
 
 import argparse
 import re
-import shlex
 import subprocess
 import sys
 import time
@@ -71,6 +70,7 @@ class AgentState:
     # Shared context across iterations
     file_context: str = ""
     last_response: str = ""
+    last_verification_output: str = ""
 
 
 # =============================================================================
@@ -187,8 +187,8 @@ def parse_code_blocks(response_text: str) -> list[dict]:
     """
     blocks = []
 
-    # Pattern 1: lang:path/to/file (language tag contains path; relative OR absolute)
-    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
+    # Pattern 1: lang:/path/to/file (language tag contains path)
+    lang_path_pattern = re.compile(r'^(\w+):(/[^/\s\n]+(?:/[^/\s\n]+)*)\n', re.MULTILINE)
 
     # Pattern 2: // FILE: /path or # FILE: /path
     file_marker_pattern = re.compile(
@@ -385,8 +385,13 @@ def apply_changes_from_response(state: AgentState, response: str) -> list[str]:
 
         # Sanitize and apply in target directory
         try:
-            # Use output_dir if provided, otherwise use target
-            base_root = state.output_dir if state.output_dir else state.target
+            # Determine if this is a new file by checking existence in target directory
+            # First resolve path_hint relative to state.target to check if file exists
+            temp_target_path = sanitize_target_path(path_hint, state.target)
+            is_new_file = not temp_target_path.exists()
+
+            # Use output_dir only for new files, otherwise use target
+            base_root = state.output_dir if (state.output_dir and is_new_file) else state.target
             target_path = sanitize_target_path(path_hint, base_root)
 
             if state.apply:
@@ -418,8 +423,8 @@ def verify_changes(state: AgentState) -> tuple[bool, str]:
 
     try:
         result = subprocess.run(
-            shlex.split(state.verify_cmd),
-            shell=False,
+            state.verify_cmd,
+            shell=True,
             capture_output=True,
             text=True,
             timeout=120,
@@ -472,12 +477,22 @@ Do NOT use just `# filename.py`. Do NOT use no annotation.
 """
     else:
         # Subsequent iterations: refine based on previous
-        return f"""Continue working on: {task}
+        prompt = f"""Continue working on: {task}
 
 Previous iteration ({state.iteration - 1}) response:
 {state.last_response[:15000]}
 
-Iteration {state.iteration}/{state.max_iterations}
+Iteration {state.iteration}/{state.max_iterations}"""
+
+        # Include verification output if available
+        if state.last_verification_output:
+            prompt += f"""
+
+Verifier output / failure:
+{state.last_verification_output[:5000]}
+"""
+
+        prompt += """
 
 If the previous changes had errors or could be improved, refine them. Otherwise, continue with the next set of changes.
 
@@ -486,6 +501,7 @@ Use the same annotation format:
 # content
 ```
 """
+        return prompt
 
 
 def run_iteration(state: AgentState) -> bool:
@@ -509,6 +525,11 @@ def run_iteration(state: AgentState) -> bool:
             timeout=180,
         )
         state.last_response = response
+    except SystemExit as se:
+        error_msg = f"Grok call failed with exit code {se.code}"
+        state.errors.append(error_msg)
+        print(f"[ERROR] {error_msg}", file=sys.stderr)
+        return False
     except Exception as e:
         state.errors.append(f"Grok call failed: {e}")
         print(f"[ERROR] Grok call failed: {e}", file=sys.stderr)
@@ -529,6 +550,7 @@ def run_iteration(state: AgentState) -> bool:
     if state.verify_cmd and state.apply:
         success, output = verify_changes(state)
         verification_succeeded = success
+        state.last_verification_output = output  # Store for next iteration
         if success:
             print("[VERIFY] Passed", file=sys.stderr)
         else:
@@ -615,7 +637,7 @@ Examples:
     parser.add_argument("--verify-cmd",
                        help="Command to run for verification (e.g., pytest)")
     parser.add_argument("--output-dir",
-                       help="Output directory for new files")
+                       help="Output directory for new files (existing files remain in target)")
     parser.add_argument("--task", "-t", required=True, dest="task",
                        help="Natural language task instruction")
 

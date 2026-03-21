@@ -75,7 +75,7 @@ if [[ -n "$VERIFY_CMD" ]]; then
     ARGS+=("--verify-cmd" "$VERIFY_CMD")
 fi
 
-ARGS+=("--task" "$TASK")
+ARGS+=("$TASK")
 
 # Execute
 python3 "${ARGS[@]}"
