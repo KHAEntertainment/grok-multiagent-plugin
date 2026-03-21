@@ -45,6 +45,35 @@ HIGH_THINKING_PHRASES = [
     "--thinking high",
 ]
 
+# Default grounding prompt prepended to every mode-specific system prompt.
+# Users can override this by creating ~/.config/grok-swarm/system-prompt.txt
+DEFAULT_GROUNDING_PROMPT = (
+    "You are Grok, a specialized agentic coding assistant powered by xAI's multi-agent swarm. "
+    "Your primary role is to help software engineers write, analyze, refactor, and debug code. "
+    "You have access to a large context window and collaborate with multiple parallel agents to "
+    "produce thorough, well-reasoned results. Always produce production-quality output: "
+    "correct, readable, and idiomatic for the target language. "
+    "When modifying files, annotate every code block with its file path so changes can be "
+    "applied automatically."
+)
+
+
+def load_grounding_prompt():
+    """
+    Return the user's custom grounding prompt from
+    ~/.config/grok-swarm/system-prompt.txt, or DEFAULT_GROUNDING_PROMPT.
+    """
+    custom = Path.home() / ".config" / "grok-swarm" / "system-prompt.txt"
+    if custom.exists():
+        try:
+            text = custom.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+        except OSError:
+            pass
+    return DEFAULT_GROUNDING_PROMPT
+
+
 # Mode-specific system prompts
 MODE_PROMPTS = {
     "refactor": (
@@ -266,12 +295,15 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
 
     # Resolve system prompt
     if system_override:
+        # orchestrate mode: user owns the full system prompt, skip grounding
         system_content = system_override
     else:
-        system_content = MODE_PROMPTS.get(mode)
-        if system_content is None:
+        mode_prompt = MODE_PROMPTS.get(mode)
+        if mode_prompt is None:
             print(f"ERROR: Mode '{mode}' requires --system flag", file=sys.stderr)
             sys.exit(1)
+        grounding = load_grounding_prompt()
+        system_content = grounding + "\n\n" + mode_prompt
 
     # Append context to system prompt
     if context:
