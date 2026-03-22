@@ -134,6 +134,18 @@ def get_api_key():
         except (json.JSONDecodeError, KeyError):
             pass
 
+    # 2b. Claude Code plugin settings file (legacy: written by setup.sh)
+    claude_settings = Path.home() / ".claude" / "grok-swarm.local.md"
+    if claude_settings.exists():
+        try:
+            for line in claude_settings.read_text(encoding="utf-8").splitlines():
+                if line.startswith("api_key:"):
+                    key = line.split(":", 1)[1].strip()
+                    if key:
+                        return key
+        except OSError:
+            pass
+
     # 3. OpenClaw auth profiles (for OpenClaw integration)
     auth_paths = [
         Path.home() / ".openclaw" / "agents" / "coder" / "agent" / "auth-profiles.json",

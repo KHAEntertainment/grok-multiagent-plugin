@@ -28,6 +28,16 @@ if api_key=$(get_api_key) && [ -n "$api_key" ]; then
     exit 0
 fi
 
-# No API key - prompt for setup
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-exec "$SCRIPT_DIR/setup.sh"
+# No API key found — guide user to the OAuth-based setup command
+echo ""
+echo "No API key configured."
+echo ""
+echo "Run '/grok-swarm:setup' inside Claude Code to authorize via OpenRouter's"
+echo "OAuth flow. Your key will never pass through Claude's context window."
+echo ""
+echo "Or set manually:"
+echo "  export OPENROUTER_API_KEY=sk-or-v1-..."
+echo "  # or: mkdir -p ~/.config/grok-swarm && echo '{\"api_key\": \"sk-or-v1-...\"}' > ~/.config/grok-swarm/config.json"
+echo ""
+echo "Get a key at: https://openrouter.ai/keys"
+exit 1
