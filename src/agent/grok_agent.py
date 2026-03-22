@@ -187,8 +187,8 @@ def parse_code_blocks(response_text: str) -> list[dict]:
     """
     blocks = []
 
-    # Pattern 1: lang:/path/to/file (language tag contains path)
-    lang_path_pattern = re.compile(r'^(\w+):(/[^/\s\n]+(?:/[^/\s\n]+)*)\n', re.MULTILINE)
+    # Pattern 1: lang:path/to/file (language tag contains path; relative OR absolute)
+    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
 
     # Pattern 2: // FILE: /path or # FILE: /path
     file_marker_pattern = re.compile(
