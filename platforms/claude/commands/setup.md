@@ -32,12 +32,17 @@ to run a test query. **Stop here.**
 ## Step 2 — Run the OAuth flow
 
 Locate `oauth_setup.py` in the plugin's `src/bridge/` directory and run it
-with a 200-second timeout:
+with a 200-second timeout. The timeout is enforced by the Bash tool invocation
+(via the `timeout` parameter in the tool call or CI runner timeout settings):
 
 ```bash
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../../.." 2>/dev/null && pwd)"
-python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py"
+timeout 200s python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py"
 ```
+
+**Note**: The `timeout 200s` wrapper ensures the command terminates if the OAuth
+flow exceeds 200 seconds. The script itself has an internal 180-second callback
+timeout (see `OAUTH_TIMEOUT_SECS`), so the 200s outer limit provides a safety margin.
 
 The script will:
 1. Print an authorization URL

@@ -124,7 +124,7 @@ class _CallbackHandler(BaseHTTPRequestHandler):
 
 def _exchange_code(code: str, code_verifier: str) -> str:
     """Exchange auth code for API key via OpenRouter token endpoint."""
-    payload = json.dumps({"code": code}).encode()
+    payload = json.dumps({"code": code, "code_verifier": code_verifier}).encode()
     req = urllib.request.Request(
         OPENROUTER_TOKEN_URL,
         data=payload,
@@ -194,8 +194,27 @@ def run_oauth_flow() -> int:
     print()
     print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization callback...")
 
-    server = HTTPServer(("localhost", CALLBACK_PORT), _CallbackHandler)
-    server.timeout = OAUTH_TIMEOUT_SECS
+    # Handle bind-time races: another process may have bound between the
+    # _check_port_available call and this HTTPServer creation.
+    max_retries = 3
+    server = None
+    for attempt in range(max_retries):
+        try:
+            server = HTTPServer(("localhost", CALLBACK_PORT), _CallbackHandler)
+            server.timeout = OAUTH_TIMEOUT_SECS
+            break
+        except OSError as exc:
+            if attempt < max_retries - 1:
+                __import__("time").sleep(0.5)
+                continue
+            # Final attempt failed
+            print(
+                f"\nERROR: Failed to bind to port {CALLBACK_PORT} after {max_retries} attempts: {exc}",
+                file=sys.stderr,
+            )
+            print("Please try again or set your key manually:", file=sys.stderr)
+            print("  export OPENROUTER_API_KEY=sk-or-v1-...", file=sys.stderr)
+            return 1
 
     deadline = __import__("time").time() + OAUTH_TIMEOUT_SECS
     while not _received_code and __import__("time").time() < deadline:
