@@ -25,6 +25,7 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import List, Tuple
 
 # OpenRouter OAuth constants
 OPENROUTER_AUTH_URL = "https://openrouter.ai/auth"
@@ -42,7 +43,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 # PKCE helpers
 # ---------------------------------------------------------------------------
 
-def _generate_pkce_pair() -> tuple[str, str]:
+def _generate_pkce_pair() -> Tuple[str, str]:
     """Return (code_verifier, code_challenge)."""
     verifier_bytes = secrets.token_bytes(64)
     code_verifier = base64.urlsafe_b64encode(verifier_bytes).rstrip(b"=").decode()
@@ -96,7 +97,7 @@ def _save_key(api_key: str) -> None:
 # OAuth callback server
 # ---------------------------------------------------------------------------
 
-_received_code: list[str] = []
+_received_code: List[str] = []
 
 
 class _CallbackHandler(BaseHTTPRequestHandler):
@@ -238,8 +239,7 @@ def run_oauth_flow() -> int:
         return 1
 
     _save_key(api_key)
-    masked = api_key[:12] + "..." if len(api_key) > 12 else api_key
-    print(f"OK\n\nSuccess! API key saved to {CONFIG_FILE}\nKey: {masked}")
+    print(f"OK\n\nSuccess! API key saved to {CONFIG_FILE}")
     return 0
 
 
@@ -272,7 +272,7 @@ Option B — xAI direct (no OAuth available):
 
      export XAI_API_KEY=xai-...
 
-     # or save permanently (grok_bridge will read XAI_API_KEY):
+     # or save permanently (grok_bridge will read the "api_key" field from config.json):
      mkdir -p ~/.config/grok-swarm
      echo '{"api_key": "xai-..."}' > ~/.config/grok-swarm/config.json
      chmod 600 ~/.config/grok-swarm/config.json
