@@ -82,11 +82,6 @@ Show the user the URL printed by the script and tell them:
 - If the script exits 0: confirm success and suggest running `/grok-swarm:analyze Hello world`
 - If it exits 1 (timeout or port conflict): show the error message from the script
   and suggest the manual fallback:
-  ```
-  mkdir -p ~/.config/grok-swarm
-  echo '{"api_key": "sk-or-v1-..."}' > ~/.config/grok-swarm/config.json
-  chmod 600 ~/.config/grok-swarm/config.json
-  ```
   Direct them to https://openrouter.ai/keys for a key.
 
 ## xAI Direct Users
