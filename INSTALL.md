@@ -103,9 +103,8 @@ Install the plugin from the Claude Code marketplace.
 
 ### Step 3: Configure API Key
 
-```bash
-./scripts/setup.sh
-```
+Run `/grok-swarm:setup` inside Claude Code — an OAuth browser flow will
+authorize your OpenRouter account without exposing your API key in-context.
 
 ### Usage in Claude Code
 
@@ -147,9 +146,9 @@ cp -r src/plugin ~/.openclaw/extensions/grok-swarm/
 
 ### Configure API Key
 
-```bash
-./scripts/setup.sh
-```
+**For Claude Code:** Run `/grok-swarm:setup` — OAuth browser flow, no key in-context.
+
+**For OpenClaw/CLI:** Run `./scripts/setup.sh` or set `OPENROUTER_API_KEY` manually.
 
 ---
 
@@ -175,9 +174,9 @@ grok-swarm --help
 
 ### For Claude Code
 
-```bash
-# Set up API key
-./scripts/setup.sh
+```
+# Authorize via OAuth (no API key in-context)
+/grok-swarm:setup
 
 # Try it out
 /grok-swarm:analyze Review my auth module for security issues

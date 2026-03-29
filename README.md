@@ -109,10 +109,10 @@ npm install -g @openclaw/grok-swarm
 
 # Install the plugin
 /plugin install grok-swarm@khaentertainment
-
-# Set up API key
-./scripts/setup.sh
 ```
+
+Then run `/grok-swarm:setup` inside Claude Code — an OAuth browser flow will
+authorize your OpenRouter account without exposing your API key in-context.
 
 ### Option 3: ClawHub (OpenClaw)
 

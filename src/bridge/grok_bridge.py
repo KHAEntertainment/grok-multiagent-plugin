@@ -96,6 +96,18 @@ def get_api_key():
         except (json.JSONDecodeError, KeyError):
             pass
 
+    # 2b. Claude Code plugin settings file (legacy: written by setup.sh)
+    claude_settings = Path.home() / ".claude" / "grok-swarm.local.md"
+    if claude_settings.exists():
+        try:
+            for line in claude_settings.read_text(encoding="utf-8").splitlines():
+                if line.startswith("api_key:"):
+                    key = line.split(":", 1)[1].strip()
+                    if key:
+                        return key
+        except OSError:
+            pass
+
     # 3. OpenClaw auth profiles (for OpenClaw integration)
     auth_paths = [
         Path.home() / ".openclaw" / "agents" / "coder" / "agent" / "auth-profiles.json",
@@ -175,7 +187,9 @@ def _safe_dest(output_path, file_path):
     """
     raw = Path(file_path)
     if raw.is_absolute():
-        raise ValueError(f"Absolute paths are not allowed: {file_path!r}")
+        rebased = Path(raw.name)
+        print(f"WARNING: Absolute path rebased to output dir: {file_path!r} → {rebased!r}", file=sys.stderr)
+        raw = rebased
     if ".." in raw.parts:
         raise ValueError(f"Path traversal not allowed: {file_path!r}")
     dest = (output_path / raw).resolve()
@@ -212,8 +226,8 @@ def parse_and_write_files(response_text, output_dir):
     written = []
     output_path = Path(output_dir)
 
-    # Pattern 1: lang:/path/to/file (language tag contains path)
-    lang_path_pattern = re.compile(r'^(\w+):(/[^\s\n]+(?:/[^\s\n]+)*)\n', re.MULTILINE)
+    # Pattern 1: lang:path/to/file (language tag contains path; relative OR absolute — broad match)
+    lang_path_pattern = re.compile(r'^(\w+):([^\s\n]+)\n', re.MULTILINE)
 
     # Pattern 2: // FILE: /path or # FILE: /path
     file_marker_pattern = re.compile(
