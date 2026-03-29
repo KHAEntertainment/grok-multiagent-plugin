@@ -4,7 +4,7 @@
 
 Give any AI coding agent access to Grok 4.20's 4-agent swarm with ~2M token context.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/KHAEntertainment/grok-multiagent-plugin)
 
 ---
 
