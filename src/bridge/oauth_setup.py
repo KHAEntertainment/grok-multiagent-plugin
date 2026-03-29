@@ -260,7 +260,7 @@ def run_oauth_flow() -> int:
         _save_key(api_key)
     except OSError as exc:
         print(f"FAILED\nERROR: Could not save API key to {CONFIG_FILE}: {exc}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     print(f"OK\n\nSuccess! API key saved to {CONFIG_FILE}")
     return 0
