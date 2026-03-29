@@ -21,6 +21,7 @@ import os
 import secrets
 import socket
 import sys
+import tempfile
 import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -89,8 +90,22 @@ def _save_key(api_key: str) -> None:
         except (json.JSONDecodeError, OSError):
             pass
     existing["api_key"] = api_key
-    CONFIG_FILE.write_text(json.dumps(existing, indent=2) + "\n", encoding="utf-8")
-    CONFIG_FILE.chmod(0o600)
+
+    # Write to a temporary file with secure permissions, then atomically rename
+    json_bytes = (json.dumps(existing, indent=2) + "\n").encode("utf-8")
+    fd = os.open(
+        str(CONFIG_DIR / f".config.json.tmp.{os.getpid()}"),
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+        0o600
+    )
+    try:
+        os.write(fd, json_bytes)
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+    # Atomically replace the target file
+    os.replace(str(CONFIG_DIR / f".config.json.tmp.{os.getpid()}"), str(CONFIG_FILE))
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +176,9 @@ def run_oauth_flow() -> int:
 
     Returns 0 on success, 1 on failure.
     """
+    # Clear any stale codes from previous runs
+    _received_code.clear()
+
     if not _check_port_available():
         print(
             f"ERROR: Port {CALLBACK_PORT} is already in use.\n"
@@ -238,7 +256,12 @@ def run_oauth_flow() -> int:
         print(f"FAILED\nERROR: {exc}", file=sys.stderr)
         return 1
 
-    _save_key(api_key)
+    try:
+        _save_key(api_key)
+    except OSError as exc:
+        print(f"FAILED\nERROR: Could not save API key to {CONFIG_FILE}: {exc}", file=sys.stderr)
+        sys.exit(1)
+
     print(f"OK\n\nSuccess! API key saved to {CONFIG_FILE}")
     return 0
 

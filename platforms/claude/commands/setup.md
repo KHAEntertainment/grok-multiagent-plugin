@@ -15,14 +15,23 @@ flow ensures the key never passes through this conversation.
 
 Run:
 ```bash
-python3 "$(dirname $(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1))/oauth_setup.py" --check 2>/dev/null || python3 "$(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1)" --check 2>/dev/null
+OAUTH_PATH="$(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1)"
+if [ -n "$OAUTH_PATH" ]; then
+  python3 "$(dirname "$OAUTH_PATH")/oauth_setup.py" --check 2>/dev/null
+else
+  OAUTH_PATH="$(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1)"
+  [ -n "$OAUTH_PATH" ] && python3 "$OAUTH_PATH" --check 2>/dev/null
+fi
 ```
 
 Alternative (locate bridge relative to this command file):
 ```bash
-BRIDGE_DIR="$(dirname $(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1) 2>/dev/null)"
-if [ -z "$BRIDGE_DIR" ]; then
-  BRIDGE_DIR="$(dirname $(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1) 2>/dev/null)"
+OAUTH_PATH="$(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1)"
+if [ -n "$OAUTH_PATH" ]; then
+  BRIDGE_DIR="$(dirname "$OAUTH_PATH")"
+else
+  OAUTH_PATH="$(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1)"
+  [ -n "$OAUTH_PATH" ] && BRIDGE_DIR="$(dirname "$OAUTH_PATH")"
 fi
 if [ -f "$BRIDGE_DIR/oauth_setup.py" ]; then
   python3 "$BRIDGE_DIR/oauth_setup.py" --check
@@ -35,13 +44,16 @@ to run a test query. **Stop here.**
 ## Step 2 — Run the OAuth flow
 
 Locate `oauth_setup.py` in the plugin's `src/bridge/` directory and run it
-with a 200-second timeout. The timeout is enforced by the Bash tool invocation
+with a 240 seconds timeout. The timeout is enforced by the Bash tool invocation
 (via the `timeout` parameter in the tool call or CI runner timeout settings):
 
 ```bash
-PLUGIN_ROOT="$(cd "$(dirname $(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1))/../.." 2>/dev/null && pwd)"
-if [ -z "$PLUGIN_ROOT" ]; then
-  PLUGIN_ROOT="$(cd "$(dirname $(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1))/../.." 2>/dev/null && pwd)"
+OAUTH_PATH="$(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1)"
+if [ -n "$OAUTH_PATH" ]; then
+  PLUGIN_ROOT="$(cd "$(dirname "$OAUTH_PATH")/../.." 2>/dev/null && pwd)"
+else
+  OAUTH_PATH="$(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1)"
+  [ -n "$OAUTH_PATH" ] && PLUGIN_ROOT="$(cd "$(dirname "$OAUTH_PATH")/../.." 2>/dev/null && pwd)"
 fi
 timeout 240s python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py"
 ```
@@ -81,9 +93,12 @@ Show the user the URL printed by the script and tell them:
 
 If the user says they want to use xAI directly (not OpenRouter), run:
 ```bash
-PLUGIN_ROOT="$(cd "$(dirname $(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1))/../.." 2>/dev/null && pwd)"
-if [ -z "$PLUGIN_ROOT" ]; then
-  PLUGIN_ROOT="$(cd "$(dirname $(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1))/../.." 2>/dev/null && pwd)"
+OAUTH_PATH="$(find ~/.claude/plugins -name 'oauth_setup.py' 2>/dev/null | head -1)"
+if [ -n "$OAUTH_PATH" ]; then
+  PLUGIN_ROOT="$(cd "$(dirname "$OAUTH_PATH")/../.." 2>/dev/null && pwd)"
+else
+  OAUTH_PATH="$(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1)"
+  [ -n "$OAUTH_PATH" ] && PLUGIN_ROOT="$(cd "$(dirname "$OAUTH_PATH")/../.." 2>/dev/null && pwd)"
 fi
 python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py" --provider xai
 ```
