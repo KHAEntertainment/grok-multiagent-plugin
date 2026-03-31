@@ -7,7 +7,62 @@ version: 1.0.0
 
 # Grok Swarm — Agent-to-Agent Integration Guide
 
+**CRITICAL: For AI agents only. Do NOT route large outputs through Claude's context window.**
+
 This document explains how to integrate Grok Swarm into multi-agent workflows. For human-facing commands, see the main SKILL.md.
+
+## ⚠️ Context Window Pollution Warning
+
+**NEVER pass Grok's full output through Claude Code's context window.**
+
+Grok has a **2M token context window**. Claude Code typically has **200K-1M tokens**. Passing Grok's full output through Claude would:
+- Destroy smaller agents' context
+- Cause context overflow/overwhelm
+- Make Claude appear to have "forgotten" everything
+
+**SAFE patterns:**
+- Grok → writes files to disk → Claude reads files
+- Grok → writes to shared directory → Claude reads results
+- Use `--apply` and `--output-dir` to write directly, don't pass through context
+
+**UNSAFE patterns:**
+```
+# BAD - context pollution
+"Here are Grok's findings: [paste 50K token output]"
+# Grok's full output would destroy Claude's context
+
+# GOOD - file-based handoff
+"Results written to /tmp/grok-analysis/. See files."
+# Claude reads files independently
+```
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Claude Code (200K-1M context)                                │
+│ - Orchestrates tasks                                          │
+│ - Delegates to Grok                                           │
+│ - Synthesizes results                                         │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ CLI invocation (small prompt)
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Grok Bridge (local process)                                   │
+│ - Reads files directly from disk                              │
+│ - Sends to Grok API (2M context)                             │
+│ - Writes results to disk                                      │
+└─────────────────────┬───────────────────────────────────────┘
+                      │ API call
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│ Grok 4.20 (2M token context)                                 │
+│ - 4 or 16 agents work on task                                │
+│ - Returns response + file annotations                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key insight:** File content goes `disk → bridge → API → Grok`. It does NOT pass through Claude's context. Claude only receives the final response text.
 
 ## Invocation Pattern
 
@@ -42,100 +97,118 @@ python3 src/bridge/grok_bridge.py --mode <mode> --prompt "<task>" [options]
 | `low` (default) | 4 | Normal requests |
 | `high` | 16 | "16 agent", "high thinking", deep research |
 
-Example:
-```
-/grok-swarm:reason Explain consensus algorithms --thinking high
-```
-
 ## File Context
 
 Pass files for Grok to analyze:
 ```
-/grok-swarm:analyze Find bugs --files src/auth/*.py
+/grok-swarm:analyze Find bugs --files src/foo.py src/bar.py
 ```
 
-**Limitation**: Glob patterns (`*.py`) don't auto-expand. Pass explicit paths:
+**IMPORTANT — How file reading works:**
+- The bridge reads files directly from disk (NOT through Claude's context)
+- File paths are passed as **arguments**, not content
+- Content is read by bridge and sent to Grok API
+- Claude's context window is NOT used for file content
+
+**⚠️ Limitation — Glob patterns don't auto-expand:**
 ```bash
-python3 src/bridge/grok_bridge.py --files src/auth/login.py src/auth/session.py --mode analyze --prompt "..."
+# This does NOT work:
+--files "src/**/*.py"
+
+# You must pass explicit paths:
+--files src/auth/login.py src/auth/session.py src/auth/utils.py
+```
+
+**Workaround for directory analysis:** Use the autonomous agent which discovers files itself:
+```bash
+python3 src/agent/grok_agent.py --task "Analyze security" --target ./src --apply
 ```
 
 ## Output Modes
 
 | Mode | Writes Files | Notes |
 |------|-------------|-------|
-| Default (dry-run) | ❌ No | Preview only |
-| `--apply` | ✅ Yes | Actually writes |
-| `--output-dir` | ✅ Yes | Write to specific dir |
+| Default (dry-run) | ❌ No | Preview only, returns to stdout |
+| `--write-files` | ✅ Yes | Writes annotated blocks to `--output-dir` |
+| `--output-dir` | ✅ Yes | Directory for written files |
 
-**File annotation formats** Grok uses:
-1. ````python:path/to/file.py` ````
+**⚠️ IMPORTANT — File Writing Bypasses Claude's Context:**
+
+When using `--write-files --output-dir /path`, Grok writes directly to disk. The response text returned to Claude is just a summary, NOT the full file content. This is the intended behavior for avoiding context pollution.
+
+**File annotation formats** Grok uses for writing:
+1. ` ```python:path/to/file.py` ````
 2. `// FILE: path/to/file.py` inside block
 3. `# filename.py` comment header
 
-## Important Limitations
+## Critical Limitations
 
-### 1. Stateless — No Multi-turn Sessions
+### 1. ⚠️ STATELESS — No Multi-turn Sessions
 Each invocation is **independent**. Grok has no memory of previous calls.
 
-**Workaround**: Include all context in the prompt. If continuing work, summarize previous results explicitly.
-
+**Context must be explicitly provided each time:**
 ```
-# Bad — Grok won't remember
+# BAD — Grok won't remember
 "Continue the security audit from before"
 
-/# Good — Include previous findings
+/# GOOD — Include all context explicitly
 "Continue security audit. Previous findings: [paste findings]. Now check data validation."
 ```
 
-### 2. Single Response — No Streaming
+**See Issue #30** for planned stateful session support.
+
+### 2. ⚠️ NO Streaming — Single Response Only
 The bridge waits for full response before returning. No real-time updates.
 
-### 3. No Native Agent Pool
+### 3. ⚠️ NO Native Agent Pool
 Grok cannot be registered as a Claude sub-agent. Orchestration is manual:
-
-- Run Grok in background: `python3 src/bridge/grok_bridge.py [args] &`
+- Run Grok in background: `python3 grok_bridge.py [args] &`
 - Continue Claude work independently
 - Collect Grok results when needed
 
-### 4. No Tool Passthrough (Currently)
+### 4. ⚠️ NO Tool Passthrough (Currently)
 Built-in Grok tools (web search, code execution) are **not enabled** by default. The bridge uses Grok for reasoning only, not tool calling.
 
-### 5. Rate Limiting
-OpenRouter may rate limit. If seeing errors, add delays between calls:
-```python
-import time; time.sleep(2)  # Between calls
-```
+### 5. ⚠️ Rate Limiting
+OpenRouter may rate limit. If seeing errors, add delays between calls.
 
-## Multi-Agent Coordination Patterns
+## Safe Multi-Agent Coordination Patterns
 
-### Pattern 1: Sequential Handoff
+### Pattern 1: Sequential Handoff (SAFE)
 ```
 Claude → Grok (analyze) → Claude (review) → Grok (fix)
 ```
 
-Include Grok output explicitly in subsequent Claude prompts.
+Include Grok output explicitly in subsequent prompts. Results are small text summaries, not file dumps.
 
-### Pattern 2: Parallel Research
+### Pattern 2: Parallel Research (SAFE)
 ```bash
 # Terminal 1
-python3 src/bridge/grok_bridge.py --mode reason --prompt "Pros of microservices" --session-id micro1 &
+python3 src/bridge/grok_bridge.py --mode reason --prompt "Pros of microservices" --output-dir /tmp/grok/pros &
 
 # Terminal 2
-python3 src/bridge/grok_bridge.py --mode reason --prompt "Cons of microservices" --session-id micro2 &
+python3 src/bridge/grok_bridge.py --mode reason --prompt "Cons of microservices" --output-dir /tmp/grok/cons &
 
 # Wait both, then Claude synthesizes
 ```
 
-### Pattern 3: Background Worker
+### Pattern 3: Background Worker (SAFE)
 ```bash
 # Start Grok as background worker
-nohup python3 src/bridge/grok_bridge.py --mode analyze --files src/ --prompt "Audit security" --output-dir /tmp/grok-results/ > grok.log 2>&1 &
+nohup python3 src/bridge/grok_bridge.py --mode analyze --files src/ --prompt "Audit security" --output-dir /tmp/grok-results --write-files > grok.log 2>&1 &
 
 # Continue Claude work...
 
-# Later, check results
+# Later, check results (small text files)
 cat /tmp/grok-results/*.md
 ```
+
+### Pattern 4: Agent Loop (SAFE for Large Tasks)
+```bash
+python3 src/agent/grok_agent.py --task "Refactor auth module" --target ./src/auth --apply --verify-cmd "pytest"
+```
+
+The agent loop iteratively improves code, writing directly to disk each iteration.
 
 ## Error Handling
 
@@ -150,25 +223,27 @@ cat /tmp/grok-results/*.md
 ## Security Notes for Agents
 
 1. **API Key Exposure**: Keys are in `~/.config/grok-swarm/config.json`. Don't log or display.
-2. **File Write Safety**: Use `--apply` only when explicitly authorized. Grok can write anywhere in target dir.
-3. **Context Size**: Large file contexts count against token limits. Use selective file inclusion.
-
-## Session/State Roadmap
-
-See [Issue #30](https://github.com/KHAEntertainment/grok-multiagent-plugin/issues/30) for planned stateful session support. Currently all calls are stateless.
+2. **File Write Safety**: Use `--write-files` only when explicitly authorized. Grok writes to `--output-dir` only.
+3. **Context Size**: Large file contexts count against Grok's 2M limit. Use selective file inclusion.
 
 ## Quick Reference
 
 ```bash
-# Analyze
+# Analyze (writes summary to stdout, files to --output-dir if specified)
 python3 src/bridge/grok_bridge.py --mode analyze --files src/*.py --prompt "Find bugs"
 
-# Code with apply
-python3 src/bridge/grok_bridge.py --mode code --prompt "Write a CLI" --output-dir ./src --apply
+# Code with apply (writes directly to disk, NOT through context)
+python3 src/bridge/grok_bridge.py --mode code --prompt "Write a CLI" --output-dir ./src --write-files
 
 # High thinking
 python3 src/bridge/grok_bridge.py --mode reason --prompt "Complex analysis" --thinking high
 
-# With timeout (seconds)
-python3 src/bridge/grok_bridge.py --mode reason --prompt "..." --timeout 180
+# Autonomous agent (discovers files, iteratively improves)
+python3 src/agent/grok_agent.py --task "Add tests" --target ./src --apply --verify-cmd "pytest"
 ```
+
+## File Reading Caveats & Improvements
+
+**Current limitation:** File paths must be passed explicitly — no glob expansion, no directory scanning.
+
+**See Issue #31:** [Improve file discovery and tool usage for agents](https://github.com/KHAEntertainment/grok-multiagent-plugin/issues/31)
