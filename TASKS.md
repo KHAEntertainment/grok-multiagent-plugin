@@ -1,196 +1,34 @@
-# Grok Multi-Agent — Project Status
+# Tasks — Grok Multi-Agent
 
-**Last Updated:** 2026-03-19
+## Completed
 
-## Overview
+- [x] Define project scope and done criteria
+- [x] Build core bridge skill (`~/.openclaw/skills/grok-refactor/`)
+- [x] Build OpenClaw plugin (`~/.openclaw/extensions/grok-swarm/`)
+- [x] Create project scaffold (`~/projects/grok-multi-agent/`)
+- [x] Write comprehensive README
+- [x] Write CLAWHUB publication metadata
+- [x] Write CHANGELOG
+- [x] Document test results
+- [x] Initialize git repository
+- [x] Create requirements.txt and .gitignore
 
-Grok Swarm is a dual-platform OpenClaw + Claude Code integration that bridges to xAI's Grok 4.20 Multi-Agent Beta. Built during Grok Swarm development sprint (2026-03-16 to 2026-03-19).
+## Pending
 
----
+- [ ] Expand SKILL.md with full parameter reference and examples
+- [ ] Create GitHub repository for ClawHub publishing
+- [ ] Publish to npm
+- [ ] Publish to ClawHub
 
-## Completed ✅
+## Project Status
 
-### Core Implementation
-- [x] Grok 4.20 Multi-Agent Beta bridge (`grok_bridge.py`)
-- [x] Node.js wrapper (`index.js`)
-- [x] OpenClaw plugin (`src/plugin/`)
-- [x] Claude Code skill (`platforms/claude/`)
-- [x] File writing capability (`--write-files`, `--output-dir`)
-- [x] Morph LLM MCP integration (`--use-morph`)
-- [x] API key resolution (env → config file → OpenClaw profiles)
+**Status:** Documentation Complete ✅  
+**Location:** `~/projects/grok-multi-agent/`  
+**Skill:** `~/.openclaw/skills/grok-refactor/`  
+**Plugin:** `~/.openclaw/extensions/grok-swarm/`  
 
-### Documentation
-- [x] User story ("The Story" section in README)
-- [x] Dual-platform quick start (Claude Code + OpenClaw)
-- [x] API key resolution precedence documented
-- [x] File writing patterns documented
-- [x] Morph LLM integration documented
+## Next Steps
 
-### Repository
-- [x] GitHub repo: https://github.com/KHAEntertainment/grok-multiagent-plugin
-- [x] Branches: `master`, `claude-plugin` (active)
-- [x] File writing feature (Traycer's recommendation)
-- [x] CodeRabbit reviews applied
-
----
-
-## In Progress 🚧
-
-### Packaging & Distribution
-- [x] Package as NPM module (`@khaentertainment/grok-swarm`)
-- [x] Package as ClawHub skill
-- [x] Package as Claude Code Marketplace Plugin (via GitHub Repo)
-- [x] GitHub Actions workflow for npm auto-publish on tag push
-- [ ] Test new packages/install methods
-- [ ] Verify ClawHub install flow works end-to-end
-- [ ] Verify Claude Code marketplace install flow works end-to-end
-
-### Documentation Gaps
-- [ ] Installation video/screenshot walkthrough
-- [ ] Troubleshooting section expansion
-
----
-
-## Planned Features (GitHub Issues)
-
-| Issue | Title | Priority |
-|-------|-------|----------|
-| #9 | Interactive TUI Setup Flow for Claude Code | Medium |
-| #10 | High Thinking Mode - 16 Agent Swarm via Toggle | Medium |
-| #11 | Cost/Usage Dashboard for Token and Credit Tracking | High |
-| #12 | Grounding System Prompt for Agentic Assistant Context | High |
-| #13 | Secure Credential Management for Claude Code | High |
-
-### Feature Details
-
-#### #11 — Cost/Usage Dashboard
-**Why High Priority:** Grok 4.20 can burn through credits quickly. Users need visibility into token usage and costs.
-
-**MVP Approach:**
-- Slash command: `/grok-swarm:stats`
-- Store usage in `~/.config/grok-swarm/usage.json`
-- Use OpenRouter API for quota status
-
-**Future:** TUI dashboard + Telegram Mini App
-
-#### #12 — Grounding System Prompt
-**Why High Priority:** Grok needs consistent context about its role as an agentic assistant.
-
-**Approach:**
-- Default system prompt establishing agentic role
-- User-configurable via `~/.config/grok-swarm/system-prompt.txt`
-- Merge with per-request prompts
-
-#### #9 — Interactive TUI Setup
-**Approach:** Leverage Claude Code's TUI generation abilities for first-run setup.
-
-#### #10 — High Thinking Mode
-**Approach:** Add `--thinking high` flag to enable 16-agent mode.
-
----
-
-## Project Structure
-
-```
-grok-multiagent-plugin/
-├── src/
-│   ├── bridge/
-│   │   ├── grok_bridge.py      # Python API bridge
-│   │   ├── cli.py             # Unified CLI
-│   │   ├── apply.py           # File writing parser
-│   │   └── index.js           # Node wrapper
-│   └── plugin/
-│       ├── index.ts            # OpenClaw plugin
-│       ├── openclaw.plugin.json
-│       └── package.json
-├── platforms/
-│   └── claude/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       └── skills/
-│           └── grok-swarm/
-│               └── SKILL.md
-├── scripts/
-│   ├── build.sh
-│   ├── install.sh
-│   └── setup.sh
-├── README.md
-├── LICENSE
-├── CHANGELOG.md
-├── CLAWHUB.md
-├── pyproject.toml
-└── requirements.txt
-```
-
----
-
-## Install Methods
-
-### NPM
-```bash
-npm install @openclaw/grok-swarm
-```
-
-### Claude Code Marketplace
-```
-/plugin install grok-swarm@khaentertainment
-```
-
-### ClawHub
-```bash
-clawhub install grok-swarm
-```
-
-### Manual / Git Clone
-```bash
-git clone https://github.com/KHAEntertainment/grok-multiagent-plugin.git
-cd grok-multiagent-plugin
-./install.sh
-```
-
----
-
-## Dependencies
-
-- **Runtime:** Python 3.8+, Node.js 18+
-- **API:** OpenRouter API key with Grok 4.20 access
-- **Optional:** Morph LLM MCP for partial file edits
-
----
-
-## Release Process
-
-### Versioning
-This project follows semver. Version is maintained in:
-- `package.json` (`version` field)
-- `platforms/claude/.claude-plugin/plugin.json` (`version` field)
-- `skills/grok-refactor/openclaw.plugin.json` (`version` field)
-
-### Publishing (NPM)
-
-1. **Bump version** in all three files above
-2. **Create a git tag**: `git tag v1.3.0 && git push origin v1.3.0`
-3. GitHub Actions automatically publishes to npm
-
-The `NPM_SECRET` secret must be set in the repo (GitHub → Settings → Secrets).
-
-### Claude Code Marketplace
-Updates via git tag + GitHub repo updates. Claude Code plugins are installed directly from the repo URL.
-
-### OpenClaw (ClawHub)
-Use `clawhub publish` or the ClawHub CLI after npm publish.
-
----
-
-## Team
-
-- **Billy** — Product owner, reviewer
-- **Barry** — Implementation, documentation
-
----
-
-## Links
-
-- Repo: https://github.com/KHAEntertainment/grok-multiagent-plugin
-- Issues: https://github.com/KHAEntertainment/grok-multiagent-plugin/issues
-- Discord: https://discord.com/invite/clawd
+1. Expand SKILL.md in the skill folder for ClawHub publication
+2. Set up GitHub repo
+3. Publish package
