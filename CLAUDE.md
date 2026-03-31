@@ -95,3 +95,29 @@ bd close <id>
 ## Version Locations
 
 Version is defined in multiple places and must be kept in sync: `package.json`, `VERSION`, `pyproject.toml`, `CLAWHUB.md`, `.claude-plugin/marketplace.json`, and `platforms/claude/.claude-plugin/plugin.json`. Use `<VERSION>` as the canonical placeholder when referencing version numbers.
+
+## Release Workflow
+
+After merging significant changes (new features, bug fixes, or enhancements), bump the version and publish a new release:
+
+```bash
+# 1. Update version in all locations (see Version Locations above)
+#    Change from e.g. 1.3.0 → 1.4.0 for minor features or 2.0.0 for breaking changes
+
+# 2. Create a git tag
+git tag -a v<VERSION> -m "Release <VERSION>"
+git push origin v<VERSION>
+
+# 3. Create GitHub release (or via GitHub UI)
+gh release create v<VERSION> --title "Release <VERSION>" --notes "See CHANGELOG.md"
+
+# 4. NPM publish (if applicable)
+npm publish
+```
+
+**When to release:**
+- New features → minor version bump (1.3.0 → 1.4.0)
+- Bug fixes → patch version bump (1.3.0 → 1.3.1)
+- Breaking changes → major version bump (1.3.0 → 2.0.0)
+
+**Marketplace users** pull from `master` branch via the `marketplace.json` — the NPM package is updated on publish.
