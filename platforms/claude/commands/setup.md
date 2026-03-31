@@ -55,7 +55,14 @@ else
   OAUTH_PATH="$(find /usr /usr/local ~/.local -name 'oauth_setup.py' 2>/dev/null | head -1)"
   [ -n "$OAUTH_PATH" ] && PLUGIN_ROOT="$(cd "$(dirname "$OAUTH_PATH")/../.." 2>/dev/null && pwd)"
 fi
-timeout 240s python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py"
+# timeout is not available on macOS without Homebrew coreutils (gtimeout).
+# The script has an internal 180s timeout, so the outer wrapper is best-effort only.
+TIMEOUT_CMD=$(command -v gtimeout 2>/dev/null || command -v timeout 2>/dev/null || true)
+if [ -n "$TIMEOUT_CMD" ]; then
+  "$TIMEOUT_CMD" 240s python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py"
+else
+  python3 "$PLUGIN_ROOT/src/bridge/oauth_setup.py"
+fi
 ```
 
 **Note**: The `timeout 240s` wrapper ensures the command terminates if the OAuth
