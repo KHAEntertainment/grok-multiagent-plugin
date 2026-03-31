@@ -14,7 +14,7 @@ Reference for the Realtime Multi-agent Research API that this plugin wraps. Use 
 grok-4.20-multi-agent
 ```
 
-> **Note:** This plugin currently uses `x-ai/grok-4.20-multi-agent-beta` via OpenRouter. The direct xAI API uses `grok-4.20-multi-agent`. Both refer to the same underlying model.
+> **Note:** This plugin uses `x-ai/grok-4.20-multi-agent` via OpenRouter (now out of beta). The direct xAI API uses `grok-4.20-multi-agent`.
 
 ## API Endpoints
 
@@ -113,7 +113,7 @@ client = OpenAI(
 )
 
 response = client.chat.completions.create(
-    model="x-ai/grok-4.20-multi-agent-beta",
+    model="x-ai/grok-4.20-multi-agent",
     extra_body={"agent_count": 4},  # or 16
     messages=[
         {"role": "system", "content": "You are..."},

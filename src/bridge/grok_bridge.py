@@ -31,7 +31,7 @@ except ImportError:
 
 
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
-MODEL_ID = "x-ai/grok-4.20-multi-agent-beta"
+MODEL_ID = "x-ai/grok-4.20-multi-agent"
 
 # Agent counts per thinking level
 AGENT_COUNTS = {
