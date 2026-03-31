@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "grok_multi_agent_plugin",
+  "project_id": "cc4e4a4d-716f-4a27-8696-e2148e60bdaa"
+}
