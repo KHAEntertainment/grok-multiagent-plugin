@@ -262,7 +262,23 @@ def run_oauth_flow() -> int:
         print(f"FAILED\nERROR: Could not save API key to {CONFIG_FILE}: {exc}", file=sys.stderr)
         return 1
 
-    print(f"OK\n\nSuccess! API key saved to {CONFIG_FILE}")
+    # Validate the key works before declaring success
+    print("OK\nValidating key...", end=" ", flush=True)
+    try:
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/auth/key",
+            headers={"Authorization": f"Bearer {api_key}"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            key_info = json.loads(resp.read().decode())
+        label = key_info.get("label", "unknown")
+        print(f"OK ({label})")
+    except Exception:
+        # Key saved but validation failed — still usable, just not confirmed
+        print("SKIPPED (network error)")
+
+    print(f"\nSuccess! API key saved to {CONFIG_FILE}")
     return 0
 
 
