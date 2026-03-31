@@ -50,22 +50,26 @@ This stores your API key in `~/.claude/grok-swarm.local.md` (plugin settings pat
 /grok-swarm:reason Compare microservices vs monolith for this project
 ```
 
-## Interactive Setup Flow
+## First-Time Setup
 
-Grok Swarm uses Claude Code's interactive question tool to guide first-time setup:
+Grok Swarm uses a PKCE OAuth flow to obtain your OpenRouter API key. **Your key never passes through the LLM context window.**
 
-1. **Automatic prompt**: If no API key detected, Grok Swarm asks if you want to set one up
-2. **Single-select questions**: Quick yes/no confirmation for existing keys
-3. **Text input**: Paste your OpenRouter API key directly in chat
-4. **No leaving TUI**: Everything happens inline without switching contexts
+```
+/grok-swarm:setup
+→ Opens browser to OpenRouter authorization
+→ Browser redirects back to localhost callback
+→ Key saved to ~/.config/grok-swarm/config.json (mode 600)
+```
+
+**Get a free API key at:** https://openrouter.ai/keys
 
 ### Configuration Storage
 
-API keys are stored following Claude Code's plugin settings pattern:
+API keys are resolved in priority order:
 
-- **Plugin settings**: `~/.claude/grok-swarm.local.md` (YAML frontmatter)
-- **CLI config**: `~/.config/grok-swarm/config.json` (legacy support)
-- **Environment**: `$OPENROUTER_API_KEY` (highest priority)
+- **Environment**: `$OPENROUTER_API_KEY` or `$XAI_API_KEY` (highest priority)
+- **CLI config**: `~/.config/grok-swarm/config.json`
+- **OpenClaw auth profiles**: `~/.openclaw/auth-profiles.json`
 
 ## Advanced Features
 

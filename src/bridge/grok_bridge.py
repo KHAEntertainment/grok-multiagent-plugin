@@ -309,7 +309,12 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
     api_key = get_api_key()
     if not api_key:
         print("ERROR: No OpenRouter API key found.", file=sys.stderr)
-        print("Set OPENROUTER_API_KEY env var or configure in OpenClaw auth-profiles.json", file=sys.stderr)
+        print("Tried in order:", file=sys.stderr)
+        print("  1. OPENROUTER_API_KEY / XAI_API_KEY env var", file=sys.stderr)
+        print("  2. ~/.config/grok-swarm/config.json", file=sys.stderr)
+        print("  3. ~/.claude/grok-swarm.local.md", file=sys.stderr)
+        print("  4. OpenClaw auth profiles (~/.openclaw/)", file=sys.stderr)
+        print("Run: python3 src/bridge/oauth_setup.py   or   /grok-swarm:setup", file=sys.stderr)
         sys.exit(1)
 
     # Resolve system prompt
