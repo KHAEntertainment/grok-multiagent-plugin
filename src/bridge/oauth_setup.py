@@ -18,12 +18,15 @@ import base64
 import hashlib
 import json
 import os
+import platform
 import secrets
 import socket
+import subprocess
 import sys
 import tempfile
 import urllib.parse
 import urllib.request
+import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import List, Tuple
@@ -159,11 +162,35 @@ def _exchange_code(code: str, code_verifier: str) -> str:
     return key
 
 
-def _check_port_available() -> bool:
-    """Return True if localhost:3000 is available."""
+def _open_browser(url: str) -> None:
+    """Open URL in browser, platform-aware."""
+    system = platform.system()
+    try:
+        if system == "Darwin":  # macOS
+            subprocess.run(["open", url], check=True, capture_output=True)
+        elif system == "Windows":
+            subprocess.run(["start", url], shell=True, check=True, capture_output=True)
+        else:  # Linux and others
+            # Try common browser openers
+            for cmd in ["xdg-open", "gio open", "firefox", "chromium-browser"]:
+                result = subprocess.run(
+                    ["which", cmd], capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    subprocess.run([cmd, url], check=True, capture_output=True)
+                    return
+            # Fallback to Python's webbrowser module
+            webbrowser.open(url)
+    except Exception:
+        # If all else fails, webbrowser module is our fallback
+        webbrowser.open(url)
+
+
+def _check_port_available(port: int) -> bool:
+    """Return True if localhost:port is available."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(1)
-        return s.connect_ex(("localhost", CALLBACK_PORT)) != 0
+        return s.connect_ex(("localhost", port)) != 0
 
 
 # ---------------------------------------------------------------------------
@@ -179,10 +206,15 @@ def run_oauth_flow() -> int:
     # Clear any stale codes from previous runs
     _received_code.clear()
 
-    if not _check_port_available():
+    if not _check_port_available(CALLBACK_PORT):
         print(
             f"ERROR: Port {CALLBACK_PORT} is already in use.\n"
-            f"Stop whatever is using port {CALLBACK_PORT} and retry, or set your key manually:\n"
+            f"\n"
+            f"To fix this, run:\n"
+            f"  lsof -i :{CALLBACK_PORT}  # find the process\n"
+            f"  kill <PID>                # kill the process using port {CALLBACK_PORT}\n"
+            f"\n"
+            f"Or set your key manually:\n"
             f"  mkdir -p ~/.config/grok-swarm\n"
             f"  echo '{{\"api_key\": \"sk-or-v1-...\"}}' > ~/.config/grok-swarm/config.json\n"
             f"  chmod 600 ~/.config/grok-swarm/config.json",
@@ -211,7 +243,9 @@ def run_oauth_flow() -> int:
     print()
     print(f"  {auth_url}")
     print()
-    print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization callback...")
+    print("Attempting to open your browser...")
+    _open_browser(auth_url)
+    print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization...")
 
     # Handle bind-time races: another process may have bound between the
     # _check_port_available call and this HTTPServer creation.
