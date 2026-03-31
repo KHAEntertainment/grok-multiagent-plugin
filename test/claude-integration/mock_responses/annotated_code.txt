@@ -1,0 +1,40 @@
+I have refactored the code to improve clarity and error handling. Here are the changes:
+
+```python
+# FILE: src/bridge/validator.py
+def validate_api_key(key: str) -> bool:
+    """Validate API key format and length."""
+    if not key or not isinstance(key, str):
+        return False
+    # Keys should be at least 32 characters
+    return len(key) >= 32
+```
+
+```python
+# FILE: src/bridge/validator.py
+def validate_config(config: dict) -> ValidationResult:
+    """Validate configuration dictionary."""
+    errors = []
+    warnings = []
+
+    if "api_key" not in config:
+        errors.append("Missing required field: api_key")
+    elif not validate_api_key(config["api_key"]):
+        errors.append("Invalid API key format")
+
+    if "mode" in config and config["mode"] not in VALID_MODES:
+        warnings.append(f"Unknown mode: {config['mode']}")
+
+    return ValidationResult(errors=errors, warnings=warnings)
+```
+
+```python
+# FILE: src/bridge/errors.py
+class ValidationError(Exception):
+    """Raised when configuration validation fails."""
+    def __init__(self, errors: list[str]):
+        self.errors = errors
+        super().__init__(f"Validation failed: {', '.join(errors)}")
+```
+
+The changes add proper validation, better error messages, and type hints throughout.
