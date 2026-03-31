@@ -476,12 +476,14 @@ def main():
     )
 
     # Output
+    # Normalize response once - strip PGP blocks before any writes
+    cleaned_result = strip_pgp_blocks(result)
+
     if args.output:
-        Path(args.output).write_text(result)
+        Path(args.output).write_text(cleaned_result)
         print(f"Written to: {args.output}", file=sys.stderr)
 
     if args.write_files:
-        cleaned_result = strip_pgp_blocks(result)
         written = parse_and_write_files(cleaned_result, args.output_dir)
         if written:
             total_bytes = sum(b for _, b in written)
