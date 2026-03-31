@@ -39,6 +39,15 @@ AGENT_COUNTS = {
     "high": 16,
 }
 
+# Modes that typically return text (not annotated code blocks)
+TEXT_MODES = {"analyze", "reason", "orchestrate"}
+
+# PGP armored block detection — xAI multi-agent returns encrypted sub-agent state
+PGP_BLOCK_PATTERN = re.compile(
+    r"-----BEGIN PGP MESSAGE-----.*?-----END PGP MESSAGE-----",
+    re.DOTALL,
+)
+
 # Plain-language phrases that trigger High Thinking mode automatically
 HIGH_THINKING_PHRASES = [
     "16 agent swarm",
@@ -199,6 +208,11 @@ def _safe_dest(output_path, file_path):
     except ValueError as exc:
         raise ValueError(f"Path escapes output directory: {file_path!r}") from exc
     return dest
+
+
+def strip_pgp_blocks(text):
+    """Remove PGP-armored encrypted sub-agent state from response."""
+    return PGP_BLOCK_PATTERN.sub("", text).strip()
 
 
 def parse_and_write_files(response_text, output_dir):
@@ -467,22 +481,34 @@ def main():
     )
 
     # Output
+    # Normalize response once - strip PGP blocks before any writes
+    cleaned_result = strip_pgp_blocks(result)
+
     if args.output:
-        Path(args.output).write_text(result)
+        Path(args.output).write_text(cleaned_result)
         print(f"Written to: {args.output}", file=sys.stderr)
 
     if args.write_files:
-        written = parse_and_write_files(result, args.output_dir)
+        written = parse_and_write_files(cleaned_result, args.output_dir)
         if written:
             total_bytes = sum(b for _, b in written)
             print(f"Wrote {len(written)} files to {args.output_dir}")
             for rel_path, byte_count in written:
                 print(f"  {rel_path} ({byte_count:,} bytes)")
             print(f"Total: {total_bytes:,} bytes")
+        elif args.mode in TEXT_MODES:
+            # Text mode: no annotated files is a normal outcome
+            print(cleaned_result)
         else:
+            # Code mode: no files is unexpected but not fatal
+            fallback_dir = Path(args.output_dir)
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            fallback_path = fallback_dir / "grok-response.txt"
+            fallback_path.write_text(cleaned_result, encoding="utf-8")
             print(
-                "No annotated files found in model response to write to disk.\n"
-                "Re-run without --write-files to see the full response.",
+                f"WARNING: No annotated files found in model response.\n"
+                f"Full response saved to: {fallback_path}\n"
+                f"Tip: ask Grok to annotate code blocks with  ```lang:path/to/file  or  # FILE: path/to/file",
                 file=sys.stderr,
             )
     elif not args.output:

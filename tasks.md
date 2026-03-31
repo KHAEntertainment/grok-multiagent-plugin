@@ -22,7 +22,7 @@
 
 ## Project Status
 
-**Status:** Documentation Complete ✅  
+**Status:** Documentation In Progress ⚠️ (expand SKILL.md pending)  
 **Location:** `~/projects/grok-multi-agent/`  
 **Skill:** `~/.openclaw/skills/grok-refactor/`  
 **Plugin:** `~/.openclaw/extensions/grok-swarm/`  
