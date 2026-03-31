@@ -94,4 +94,4 @@ bd close <id>
 
 ## Version Locations
 
-Version is defined in multiple places and must be kept in sync: `package.json` (1.3.0), `VERSION` (1.0.0), `pyproject.toml`, `CLAWHUB.md`, `.claude-plugin/marketplace.json`, and `platforms/claude/.claude-plugin/plugin.json`.
+Version is defined in multiple places and must be kept in sync: `package.json`, `VERSION`, `pyproject.toml`, `CLAWHUB.md`, `.claude-plugin/marketplace.json`, and `platforms/claude/.claude-plugin/plugin.json`. Use `<VERSION>` as the canonical placeholder when referencing version numbers.
