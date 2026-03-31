@@ -103,9 +103,8 @@ class GrokSession:
 
         # Build full message list for API
         api_messages = [{"role": "system", "content": self.system_prompt}]
-        api_messages.extend(self.messages)
 
-        # Inject budget warning if nearly exhausted
+        # Inject budget warning early (right after system prompt) for visibility
         if self.total_tokens > self.max_tokens * 0.8:
             api_messages.append({
                 "role": "system",
@@ -115,6 +114,8 @@ class GrokSession:
                 ),
             })
 
+        api_messages.extend(self.messages)
+
         response = call_grok_with_messages(
             messages=api_messages,
             timeout=120,
@@ -122,7 +123,9 @@ class GrokSession:
             mode=self.mode,
         )
 
-        # Track token usage
+        # Track cumulative API token usage (for cost tracking).
+        # Each turn's total_tokens includes re-sent history, so this reflects
+        # actual API billing, not unique conversation size.
         if hasattr(response, "usage") and response.usage:
             self.total_tokens += response.usage.total_tokens
 

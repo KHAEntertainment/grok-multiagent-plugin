@@ -65,10 +65,10 @@ else
 fi
 ```
 
-**Note**: The `timeout 240s` wrapper ensures the command terminates if the OAuth
-flow exceeds 240 seconds. The script itself has an internal OAUTH_TIMEOUT_SECS
-(180s) for the callback phase plus roughly 30s for token exchange, so the 240s
-outer limit provides a safe margin.
+**Note**: The wrapper tries `gtimeout` (macOS/Homebrew), then `timeout` (Linux)
+to enforce a 240s outer limit. If neither is available (e.g. stock macOS), the
+script runs without an outer wrapper — its internal `OAUTH_TIMEOUT_SECS` (180s)
+for the callback phase plus ~30s for token exchange still prevents hangs.
 
 The script will:
 1. Print an authorization URL

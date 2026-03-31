@@ -43,13 +43,14 @@ Do not ask them to type the key in a follow-up message.
 
 ## Step 3 — Save the key
 
-Run:
+Run (pass the key via environment variable so it is never interpolated into shell or Python source):
 ```bash
-API_KEY="<the key argument>"
 mkdir -p ~/.config/grok-swarm
-python3 -c "
+GROK_SET_KEY="<the key argument>" python3 -c "
 import json, os
 from pathlib import Path
+
+api_key = os.environ['GROK_SET_KEY']
 config_file = Path.home() / '.config' / 'grok-swarm' / 'config.json'
 existing = {}
 if config_file.exists():
@@ -57,8 +58,7 @@ if config_file.exists():
         existing = json.loads(config_file.read_text())
     except Exception:
         pass
-existing['api_key'] = '$API_KEY'
-import tempfile
+existing['api_key'] = api_key
 json_bytes = (json.dumps(existing, indent=2) + '\n').encode()
 tmp = str(config_file.parent / f'.config.json.tmp.{os.getpid()}')
 fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)

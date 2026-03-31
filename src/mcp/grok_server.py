@@ -375,7 +375,6 @@ TOOL_HANDLERS = {
 def _get_session_module():
     global _session_module
     if _session_module is None:
-        from mcp.session import _sessions, create_session, get_session
         import mcp.session as mod
         _session_module = mod
     return _session_module
@@ -386,13 +385,13 @@ def _get_session_module():
 # ---------------------------------------------------------------------------
 
 def _text_content(text):
-    """Wrap text in MCP tool result content format."""
-    return [{"type": "text", "text": text}]
+    """Wrap text in MCP tool result content format. Returns (content, is_error)."""
+    return ([{"type": "text", "text": text}], False)
 
 
 def _error_content(message):
-    """Wrap error in MCP tool result content format (isError=True)."""
-    return [{"type": "text", "text": f"ERROR: {message}"}]
+    """Wrap error in MCP tool result content format. Returns (content, is_error)."""
+    return ([{"type": "text", "text": message}], True)
 
 
 # ---------------------------------------------------------------------------
@@ -433,27 +432,19 @@ def _handle_tools_call(params):
 
     handler = TOOL_HANDLERS.get(tool_name)
     if handler is None:
-        return {
-            "content": _error_content(f"Unknown tool: {tool_name}"),
-            "isError": True,
-        }
+        content, _ = _error_content(f"Unknown tool: {tool_name}")
+        return {"content": content, "isError": True}
 
     try:
-        content = handler(tool_args)
-        is_error = any(
-            isinstance(c, dict) and c.get("text", "").startswith("ERROR:")
-            for c in content
-        )
+        content, is_error = handler(tool_args)
         result = {"content": content}
         if is_error:
             result["isError"] = True
         return result
     except Exception as exc:
         log.exception("Tool %s failed", tool_name)
-        return {
-            "content": _error_content(f"Internal error in {tool_name}: {exc}"),
-            "isError": True,
-        }
+        content, _ = _error_content(f"Internal error in {tool_name}: {exc}")
+        return {"content": content, "isError": True}
 
 
 # Method dispatch table

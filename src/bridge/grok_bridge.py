@@ -383,8 +383,8 @@ def call_grok_with_messages(messages, tools=None, timeout=120, thinking="low", m
         try:
             from usage_tracker import record_usage
             record_usage(mode, thinking, u.prompt_tokens, u.completion_tokens, u.total_tokens, elapsed)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"DEBUG: Usage tracking failed: {exc}", file=sys.stderr)
 
     return response
 

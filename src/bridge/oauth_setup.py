@@ -24,6 +24,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -141,6 +142,14 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         pass  # suppress request logs
 
 
+class _InvalidCodeError(RuntimeError):
+    """Raised when the authorization code is invalid or expired (HTTP 400).
+
+    This is the only token-exchange error that is safe to retry with a fresh
+    PKCE pair — all other failures (network, 5xx, bad JSON) are fatal.
+    """
+
+
 def _exchange_code(code: str, code_verifier: str) -> str:
     """Exchange auth code for API key via OpenRouter token endpoint."""
     payload = json.dumps({"code": code, "code_verifier": code_verifier}).encode()
@@ -153,6 +162,13 @@ def _exchange_code(code: str, code_verifier: str) -> str:
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        if exc.code == 400:
+            raise _InvalidCodeError(
+                f"Authorization code rejected (HTTP 400). "
+                f"PKCE codes are single-use and may have expired."
+            ) from exc
+        raise RuntimeError(f"Token exchange failed (HTTP {exc.code}): {exc}") from exc
     except Exception as exc:
         raise RuntimeError(f"Token exchange failed: {exc}") from exc
 
@@ -272,12 +288,9 @@ def run_oauth_flow() -> int:
         print()
         print(f"  {auth_url}")
         print()
-        print("Attempting to open your browser...")
-        _open_browser(auth_url)
-        print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization...")
 
-        # Handle bind-time races: another process may have bound between the
-        # _check_port_available call and this HTTPServer creation.
+        # Bind the callback server BEFORE opening the browser so we're
+        # already listening when OpenRouter redirects back.
         server = _start_callback_server()
         if server is None:
             print(
@@ -287,6 +300,10 @@ def run_oauth_flow() -> int:
             print("Please try again or set your key manually:", file=sys.stderr)
             print("  export OPENROUTER_API_KEY=sk-or-v1-...", file=sys.stderr)
             return 1
+
+        print("Attempting to open your browser...")
+        _open_browser(auth_url)
+        print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization...")
 
         deadline = time.time() + OAUTH_TIMEOUT_SECS
         while not _received_code and time.time() < deadline:
@@ -305,14 +322,19 @@ def run_oauth_flow() -> int:
 
         try:
             api_key = _exchange_code(code, code_verifier)
-        except RuntimeError as exc:
+        except _InvalidCodeError as exc:
+            # PKCE codes are single-use — retryable with a fresh pair
             if attempt < max_attempts:
                 print(
                     f"FAILED\n"
-                    f"Authorization code expired (PKCE codes are single-use).\n"
+                    f"{exc}\n"
                     f"Starting fresh attempt {attempt + 1} of {max_attempts}..."
                 )
                 continue
+            print(f"FAILED\nERROR: {exc}", file=sys.stderr)
+            return 1
+        except RuntimeError as exc:
+            # Non-retryable errors (network, 5xx, bad JSON) — fail immediately
             print(f"FAILED\nERROR: {exc}", file=sys.stderr)
             return 1
 
