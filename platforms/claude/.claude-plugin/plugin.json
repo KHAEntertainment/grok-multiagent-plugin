@@ -8,42 +8,5 @@
     "name": "OpenClaw"
   },
   "license": "MIT",
-  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
-  "commands": [
-    {
-      "name": "setup",
-      "description": "Authorize Grok Swarm with your OpenRouter account via OAuth. No API key handling in-context.",
-      "file": "commands/grok-swarm/setup.md"
-    },
-    {
-      "name": "analyze",
-      "description": "Analyze code with Grok's multi-agent swarm. Security audit, bug detection, architecture review.",
-      "file": "commands/grok-swarm/analyze.md"
-    },
-    {
-      "name": "refactor",
-      "description": "Refactor code with Grok's multi-agent swarm. Improves quality while preserving behavior.",
-      "file": "commands/grok-swarm/refactor.md"
-    },
-    {
-      "name": "code",
-      "description": "Generate production-ready code with Grok's multi-agent swarm.",
-      "file": "commands/grok-swarm/code.md"
-    },
-    {
-      "name": "reason",
-      "description": "Multi-perspective reasoning with Grok's swarm. Compare approaches, evaluate trade-offs, get architectural guidance.",
-      "file": "commands/grok-swarm/reason.md"
-    },
-    {
-      "name": "stats",
-      "description": "Show token usage and cost statistics for Grok Swarm.",
-      "file": "commands/grok-swarm/stats.md"
-    },
-    {
-      "name": "set-key",
-      "description": "Manually save an OpenRouter API key to config. Last-resort fallback when OAuth fails.",
-      "file": "commands/grok-swarm/set-key.md"
-    }
-  ]
+  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin"
 }
