@@ -5,7 +5,7 @@
   "displayName": "Grok Swarm",
   "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Use for codebase analysis, refactoring, code generation, and complex reasoning.",
   "author": {
-    "name": "OpenClaw"
+    "name": "Billy Brenner & Claude"
   },
   "license": "MIT",
   "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin"
