@@ -50,6 +50,27 @@ This stores your API key in `~/.claude/grok-swarm.local.md` (plugin settings pat
 /grok-swarm:reason Compare microservices vs monolith for this project
 ```
 
+## MCP Tools (Native Integration)
+
+When installed via the plugin system or `claude mcp add`, Grok Swarm registers as a native MCP server. These tools are available directly — no slash commands needed:
+
+| Tool | Description |
+|------|-------------|
+| `grok_query` | Stateless single call — analyze, refactor, code, or reason |
+| `grok_session_start` | Begin a multi-turn conversation with Grok |
+| `grok_session_continue` | Continue an existing session (Grok remembers history) |
+| `grok_agent` | Run the autonomous agent loop (discover → modify → verify) |
+
+### Multi-Turn Sessions
+
+```
+grok_session_start(mode="analyze", files=["src/auth.py"])
+→ { session_id: "abc123" }
+
+grok_session_continue(session_id="abc123", message="What about password hashing?")
+→ Grok remembers the previous analysis
+```
+
 ## First-Time Setup
 
 Grok Swarm uses a PKCE OAuth flow to obtain your OpenRouter API key. **Your key never passes through the LLM context window.**

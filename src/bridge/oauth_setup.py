@@ -24,6 +24,7 @@ import socket
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -141,6 +142,14 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         pass  # suppress request logs
 
 
+class _InvalidCodeError(RuntimeError):
+    """Raised when the authorization code is invalid or expired (HTTP 400).
+
+    This is the only token-exchange error that is safe to retry with a fresh
+    PKCE pair — all other failures (network, 5xx, bad JSON) are fatal.
+    """
+
+
 def _exchange_code(code: str, code_verifier: str) -> str:
     """Exchange auth code for API key via OpenRouter token endpoint."""
     payload = json.dumps({"code": code, "code_verifier": code_verifier}).encode()
@@ -153,6 +162,13 @@ def _exchange_code(code: str, code_verifier: str) -> str:
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        if exc.code == 400:
+            raise _InvalidCodeError(
+                f"Authorization code rejected (HTTP 400). "
+                f"PKCE codes are single-use and may have expired."
+            ) from exc
+        raise RuntimeError(f"Token exchange failed (HTTP {exc.code}): {exc}") from exc
     except Exception as exc:
         raise RuntimeError(f"Token exchange failed: {exc}") from exc
 
@@ -197,18 +213,39 @@ def _check_port_available(port: int) -> bool:
 # Public entry points
 # ---------------------------------------------------------------------------
 
+def _start_callback_server() -> "HTTPServer | None":
+    """Bind the callback server to CALLBACK_PORT. Returns server or None on failure."""
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            server = HTTPServer(("localhost", CALLBACK_PORT), _CallbackHandler)
+            server.timeout = OAUTH_TIMEOUT_SECS
+            return server
+        except OSError:
+            if attempt < max_retries - 1:
+                __import__("time").sleep(0.5)
+    return None
+
+
 def run_oauth_flow() -> int:
     """
     Run the PKCE OAuth flow.
 
+    Retries once with a fresh PKCE pair if the token exchange fails (e.g. the
+    authorization code was already consumed — PKCE codes are single-use).
+
     Returns 0 on success, 1 on failure.
     """
+    import time
+
     # Clear any stale codes from previous runs
     _received_code.clear()
 
     if not _check_port_available(CALLBACK_PORT):
         print(
             f"ERROR: Port {CALLBACK_PORT} is already in use.\n"
+            f"\n"
+            f"Note: port {CALLBACK_PORT} is hardcoded by OpenRouter and cannot be changed.\n"
             f"\n"
             f"To fix this, run:\n"
             f"  lsof -i :{CALLBACK_PORT}  # find the process\n"
@@ -222,98 +259,112 @@ def run_oauth_flow() -> int:
         )
         return 1
 
-    code_verifier, code_challenge = _generate_pkce_pair()
+    max_attempts = 2
+    for attempt in range(1, max_attempts + 1):
+        _received_code.clear()
 
-    auth_params = urllib.parse.urlencode(
-        {
-            "callback_url": CALLBACK_URL,
-            "code_challenge": code_challenge,
-            "code_challenge_method": "S256",
-            "app_name": APP_NAME,
-        }
-    )
-    auth_url = f"{OPENROUTER_AUTH_URL}?{auth_params}"
+        code_verifier, code_challenge = _generate_pkce_pair()
+        auth_params = urllib.parse.urlencode(
+            {
+                "callback_url": CALLBACK_URL,
+                "code_challenge": code_challenge,
+                "code_challenge_method": "S256",
+                "app_name": APP_NAME,
+            }
+        )
+        auth_url = f"{OPENROUTER_AUTH_URL}?{auth_params}"
 
-    print("=" * 60)
-    print("Grok Swarm — OpenRouter Authorization")
-    print("=" * 60)
-    print()
-    print("Click the link below to authorize Grok Swarm with your")
-    print("OpenRouter account (or paste it into your browser):")
-    print()
-    print(f"  {auth_url}")
-    print()
-    print("Attempting to open your browser...")
-    _open_browser(auth_url)
-    print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization...")
+        if attempt == 1:
+            print("=" * 60)
+            print("Grok Swarm — OpenRouter Authorization")
+            print("=" * 60)
+            print()
+            print("Click the link below to authorize Grok Swarm with your")
+            print("OpenRouter account (or paste it into your browser):")
+        else:
+            print()
+            print(f"Attempt {attempt} of {max_attempts} — new authorization link:")
 
-    # Handle bind-time races: another process may have bound between the
-    # _check_port_available call and this HTTPServer creation.
-    max_retries = 3
-    server = None
-    for attempt in range(max_retries):
-        try:
-            server = HTTPServer(("localhost", CALLBACK_PORT), _CallbackHandler)
-            server.timeout = OAUTH_TIMEOUT_SECS
-            break
-        except OSError as exc:
-            if attempt < max_retries - 1:
-                __import__("time").sleep(0.5)
-                continue
-            # Final attempt failed
+        print()
+        print(f"  {auth_url}")
+        print()
+
+        # Bind the callback server BEFORE opening the browser so we're
+        # already listening when OpenRouter redirects back.
+        server = _start_callback_server()
+        if server is None:
             print(
-                f"\nERROR: Failed to bind to port {CALLBACK_PORT} after {max_retries} attempts: {exc}",
+                f"\nERROR: Failed to bind to port {CALLBACK_PORT}.",
                 file=sys.stderr,
             )
             print("Please try again or set your key manually:", file=sys.stderr)
             print("  export OPENROUTER_API_KEY=sk-or-v1-...", file=sys.stderr)
             return 1
 
-    deadline = __import__("time").time() + OAUTH_TIMEOUT_SECS
-    while not _received_code and __import__("time").time() < deadline:
-        server.handle_request()
+        print("Attempting to open your browser...")
+        _open_browser(auth_url)
+        print(f"Waiting up to {OAUTH_TIMEOUT_SECS}s for authorization...")
 
-    server.server_close()
+        deadline = time.time() + OAUTH_TIMEOUT_SECS
+        while not _received_code and time.time() < deadline:
+            server.handle_request()
 
-    if not _received_code:
-        print("\nERROR: Timed out waiting for authorization.", file=sys.stderr)
-        print("Please try again or set your key manually:", file=sys.stderr)
-        print("  export OPENROUTER_API_KEY=sk-or-v1-...", file=sys.stderr)
-        return 1
+        server.server_close()
 
-    code = _received_code[0]
-    print("\nCallback received. Exchanging code for API key...", end=" ", flush=True)
+        if not _received_code:
+            print("\nERROR: Timed out waiting for authorization.", file=sys.stderr)
+            print("Please try again or set your key manually:", file=sys.stderr)
+            print("  export OPENROUTER_API_KEY=sk-or-v1-...", file=sys.stderr)
+            return 1
 
-    try:
-        api_key = _exchange_code(code, code_verifier)
-    except RuntimeError as exc:
-        print(f"FAILED\nERROR: {exc}", file=sys.stderr)
-        return 1
+        code = _received_code[0]
+        print("\nCallback received. Exchanging code for API key...", end=" ", flush=True)
 
-    try:
-        _save_key(api_key)
-    except OSError as exc:
-        print(f"FAILED\nERROR: Could not save API key to {CONFIG_FILE}: {exc}", file=sys.stderr)
-        return 1
+        try:
+            api_key = _exchange_code(code, code_verifier)
+        except _InvalidCodeError as exc:
+            # PKCE codes are single-use — retryable with a fresh pair
+            if attempt < max_attempts:
+                print(
+                    f"FAILED\n"
+                    f"{exc}\n"
+                    f"Starting fresh attempt {attempt + 1} of {max_attempts}..."
+                )
+                continue
+            print(f"FAILED\nERROR: {exc}", file=sys.stderr)
+            return 1
+        except RuntimeError as exc:
+            # Non-retryable errors (network, 5xx, bad JSON) — fail immediately
+            print(f"FAILED\nERROR: {exc}", file=sys.stderr)
+            return 1
 
-    # Validate the key works before declaring success
-    print("OK\nValidating key...", end=" ", flush=True)
-    try:
-        req = urllib.request.Request(
-            "https://openrouter.ai/api/v1/auth/key",
-            headers={"Authorization": f"Bearer {api_key}"},
-            method="GET",
-        )
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            key_info = json.loads(resp.read().decode())
-        label = key_info.get("label", "unknown")
-        print(f"OK ({label})")
-    except Exception:
-        # Key saved but validation failed — still usable, just not confirmed
-        print("SKIPPED (network error)")
+        try:
+            _save_key(api_key)
+        except OSError as exc:
+            print(f"FAILED\nERROR: Could not save API key to {CONFIG_FILE}: {exc}", file=sys.stderr)
+            return 1
 
-    print(f"\nSuccess! API key saved to {CONFIG_FILE}")
-    return 0
+        # Validate the key works before declaring success
+        print("OK\nValidating key...", end=" ", flush=True)
+        try:
+            req = urllib.request.Request(
+                "https://openrouter.ai/api/v1/auth/key",
+                headers={"Authorization": f"Bearer {api_key}"},
+                method="GET",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                key_info = json.loads(resp.read().decode())
+            label = key_info.get("label", "unknown")
+            print(f"OK ({label})")
+        except Exception:
+            # Key saved but validation failed — still usable, just not confirmed
+            print("SKIPPED (network error)")
+
+        print(f"\nSuccess! API key saved to {CONFIG_FILE}")
+        return 0
+
+    # Should not be reached, but be safe
+    return 1
 
 
 def run_check() -> int:

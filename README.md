@@ -32,6 +32,8 @@ Now when your agent needs deep codebase analysis, large-scale refactoring, or co
 
 - **4-Agent Swarm** — Grok 4.20 coordinates multiple agents for deeper analysis
 - **Massive Context** — ~2M token window, handles entire codebases
+- **Native MCP Server** — Grok appears as a first-class tool in Claude Code
+- **Multi-Turn Sessions** — Stateful conversations with Grok across multiple calls
 - **5 Modes** — Analyze, Refactor, Code, Reason, Orchestrate
 - **Tool Passthrough** — Pass OpenAI-format tool schemas for function calling
 - **File Writing** — Write annotated code blocks directly to disk
@@ -258,26 +260,36 @@ claude mcp add morphllm
 
 ## Architecture
 
+### Claude Code (MCP — Preferred)
+
 ```
-OpenClaw Agent / Claude Code
-         │
-         ▼
-grok_swarm tool / skill
-         │
-         ▼
-index.js (Node wrapper)
-         │
-         ▼
+Claude Code
+    │ native MCP tool calls
+    ▼
+grok_server.py (MCP stdio server)
+    │ manages sessions, dispatches tools
+    ▼
 grok_bridge.py (Python/OpenAI SDK)
-         │
-         ▼
-OpenRouter API
-         │
-         ▼
-xAI Grok 4.20 Multi-Agent Beta
-         │
-         ▼
-Response
+    │
+    ▼
+OpenRouter API → xAI Grok 4.20 Multi-Agent
+```
+
+MCP tools: `grok_query`, `grok_session_start`, `grok_session_continue`, `grok_agent`
+
+### OpenClaw (Plugin)
+
+```
+OpenClaw Agent
+    │ tool call
+    ▼
+index.ts (OpenClaw plugin)
+    │ spawns subprocess
+    ▼
+grok_bridge.py (Python/OpenAI SDK)
+    │
+    ▼
+OpenRouter API → xAI Grok 4.20 Multi-Agent
 ```
 
 ---

@@ -51,8 +51,6 @@ if [ -f "$OAUTH_SCRIPT" ]; then
     echo
     if python3 "$OAUTH_SCRIPT"; then
         log "Setup complete!"
-        echo
-        echo "Run '/grok-swarm:analyze Find bugs in this codebase' to get started."
     else
         error "OAuth setup failed. Set OPENROUTER_API_KEY env var as a fallback."
         exit 1
@@ -65,3 +63,20 @@ else
     echo "  Get a key at: https://openrouter.ai/keys"
     exit 1
 fi
+
+# Register MCP server for native tool integration
+MCP_SERVER="${PLUGIN_ROOT}/src/mcp/grok_server.py"
+if [ -f "$MCP_SERVER" ] && command -v claude >/dev/null 2>&1; then
+    echo
+    log "Registering Grok Swarm MCP server..."
+    if claude mcp add grok-swarm -- python3 "$MCP_SERVER" 2>/dev/null; then
+        log "MCP server registered — grok_query, grok_session_start/continue, grok_agent tools available"
+    else
+        warn "MCP registration failed (non-fatal). Register manually:"
+        warn "  claude mcp add grok-swarm -- python3 $MCP_SERVER"
+    fi
+fi
+
+echo
+echo "Run '/grok-swarm:analyze Find bugs in this codebase' to get started."
+echo "Or use the native MCP tools: grok_query, grok_session_start, grok_session_continue"

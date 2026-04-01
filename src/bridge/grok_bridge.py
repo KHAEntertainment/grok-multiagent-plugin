@@ -318,6 +318,77 @@ def detect_high_thinking(prompt):
     return any(phrase in lower for phrase in HIGH_THINKING_PHRASES)
 
 
+def _get_client(api_key=None, timeout=120):
+    """Create an OpenAI client configured for OpenRouter."""
+    key = api_key or get_api_key()
+    if not key:
+        raise RuntimeError(
+            "No OpenRouter API key found. "
+            "Tried: OPENROUTER_API_KEY env, ~/.config/grok-swarm/config.json, "
+            "~/.claude/grok-swarm.local.md, OpenClaw auth profiles. "
+            "Run: python3 src/bridge/oauth_setup.py  or  /grok-swarm:setup"
+        )
+    return OpenAI(base_url=OPENROUTER_BASE, api_key=key, timeout=timeout)
+
+
+def call_grok_with_messages(messages, tools=None, timeout=120, thinking="low", mode="reason"):
+    """
+    Call Grok with a pre-built message list.
+
+    This is the low-level entry point used by sessions (multi-turn) and by
+    call_grok() for single-turn requests.
+
+    Args:
+        messages: List of OpenAI-format message dicts (system, user, assistant, tool).
+        tools: Optional list of OpenAI-format tool definitions.
+        timeout: API timeout in seconds.
+        thinking: "low" (4 agents) or "high" (16 agents).
+        mode: Task mode (for usage logging).
+
+    Returns:
+        The raw ChatCompletion response object from the OpenAI SDK.
+
+    Raises:
+        RuntimeError: If no API key is found.
+        Exception: Propagated from the OpenAI SDK on API errors.
+    """
+    client = _get_client(timeout=timeout)
+
+    kwargs = {
+        "model": MODEL_ID,
+        "messages": messages,
+        "max_tokens": 16384,
+        "temperature": 0.3,
+        "extra_body": {"agent_count": AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])},
+    }
+
+    if tools:
+        kwargs["tools"] = tools
+
+    start = time.time()
+    response = client.chat.completions.create(**kwargs)
+    elapsed = time.time() - start
+
+    # Log usage
+    if hasattr(response, "usage") and response.usage:
+        u = response.usage
+        agent_count = AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])
+        print(
+            f"USAGE: mode={mode} thinking={thinking} agents={agent_count} "
+            f"prompt={u.prompt_tokens} completion={u.completion_tokens} "
+            f"total={u.total_tokens} time={elapsed:.1f}s",
+            file=sys.stderr,
+        )
+        # Record to persistent usage tracker (best-effort)
+        try:
+            from usage_tracker import record_usage
+            record_usage(mode, thinking, u.prompt_tokens, u.completion_tokens, u.total_tokens, elapsed)
+        except Exception as exc:
+            print(f"DEBUG: Usage tracking failed: {exc}", file=sys.stderr)
+
+    return response
+
+
 def call_grok(prompt, mode="reason", context="", system_override=None, tools=None, timeout=120, thinking="low"):
     """Make the API call to Grok 4.20 Multi-Agent Beta."""
     api_key = get_api_key()
@@ -344,56 +415,31 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
     if context:
         system_content += f"\n\n## Codebase Context\n{context}"
 
-    client = OpenAI(
-        base_url=OPENROUTER_BASE,
-        api_key=api_key,
-        timeout=timeout,
-    )
-
     messages = [
         {"role": "system", "content": system_content},
         {"role": "user", "content": prompt},
     ]
 
-    kwargs = {
-        "model": MODEL_ID,
-        "messages": messages,
-        "max_tokens": 16384,
-        "temperature": 0.3,
-        "extra_body": {"agent_count": AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])},
-    }
-
-    if tools:
-        kwargs["tools"] = tools
-
-    start = time.time()
-
     try:
-        response = client.chat.completions.create(**kwargs)
+        response = call_grok_with_messages(
+            messages=messages, tools=tools, timeout=timeout, thinking=thinking, mode=mode,
+        )
+    except RuntimeError as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
     except Exception as e:
-        elapsed = time.time() - start
-        print(f"ERROR after {elapsed:.1f}s: {e}", file=sys.stderr)
+        print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
 
-    elapsed = time.time() - start
-
     if not response.choices:
-        print(f"ERROR: Empty response after {elapsed:.1f}s", file=sys.stderr)
+        print("ERROR: Empty response", file=sys.stderr)
         sys.exit(1)
 
     choice = response.choices[0]
 
-    # Log usage
-    if hasattr(response, 'usage') and response.usage:
-        u = response.usage
-        agent_count = AGENT_COUNTS.get(thinking, AGENT_COUNTS["low"])
-        print(f"USAGE: mode={mode} thinking={thinking} agents={agent_count} "
-              f"prompt={u.prompt_tokens} completion={u.completion_tokens} "
-              f"total={u.total_tokens} time={elapsed:.1f}s", file=sys.stderr)
-
     # Handle content filtering
     if choice.finish_reason == "content_filter":
-        print(f"WARNING: Response blocked by content filter after {elapsed:.1f}s", file=sys.stderr)
+        print("WARNING: Response blocked by content filter", file=sys.stderr)
         if not choice.message.content:
             print("No content returned. Try rephrasing the prompt.", file=sys.stderr)
             sys.exit(2)

@@ -42,18 +42,19 @@ Grok has a **2M token context window**. Claude Code typically has **200K-1M toke
 ┌─────────────────────────────────────────────────────────────┐
 │ Claude Code (200K-1M context)                                │
 │ - Orchestrates tasks                                          │
-│ - Delegates to Grok                                           │
+│ - Calls Grok via native MCP tools                            │
 │ - Synthesizes results                                         │
 └─────────────────────┬───────────────────────────────────────┘
-                      │ CLI invocation (small prompt)
+                      │ MCP tool call (native)
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ Grok Bridge (local process)                                   │
-│ - Reads files directly from disk                              │
-│ - Sends to Grok API (2M context)                             │
-│ - Writes results to disk                                      │
+│ Grok MCP Server (grok_server.py)                              │
+│ - grok_query: stateless single call                          │
+│ - grok_session_start/continue: multi-turn sessions           │
+│ - grok_agent: autonomous agent loop                          │
+│ - Reads files from disk, manages sessions in-memory          │
 └─────────────────────┬───────────────────────────────────────┘
-                      │ API call
+                      │ OpenAI SDK → OpenRouter API
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ Grok 4.20 (2M token context)                                 │
@@ -62,11 +63,22 @@ Grok has a **2M token context window**. Claude Code typically has **200K-1M toke
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**Key insight:** File content goes `disk → bridge → API → Grok`. It does NOT pass through Claude's context. Claude only receives the final response text.
+**Key insight:** File content goes `disk → MCP server → API → Grok`. It does NOT pass through Claude's context. Claude only receives the final response text.
 
 ## Invocation Pattern
 
-Grok Swarm is **not a native Claude sub-agent** — it's an external API. Use it via skill invocation:
+### Preferred: MCP Tools (Native)
+
+When the MCP server is registered, Grok tools appear as native tools — call them directly:
+
+```
+grok_query(prompt="Find bugs in auth module", mode="analyze", files=["src/auth.py"])
+grok_session_start(mode="analyze", files=["src/auth.py"])
+grok_session_continue(session_id="abc123", message="What about the password hashing?")
+grok_agent(task="Refactor auth module", target="./src/auth", apply=true)
+```
+
+### Alternative: Skill Commands
 
 ```
 /grok-swarm:reason <task>
@@ -75,7 +87,7 @@ Grok Swarm is **not a native Claude sub-agent** — it's an external API. Use it
 /grok-swarm:refactor <task>
 ```
 
-Or directly via CLI:
+### Alternative: Direct CLI
 ```bash
 python3 src/bridge/grok_bridge.py --mode <mode> --prompt "<task>" [options]
 ```
@@ -141,35 +153,34 @@ When using `--write-files --output-dir /path`, Grok writes directly to disk. The
 2. `// FILE: path/to/file.py` inside block
 3. `# filename.py` comment header
 
-## Critical Limitations
+## Multi-Turn Sessions
 
-### 1. ⚠️ STATELESS — No Multi-turn Sessions
-Each invocation is **independent**. Grok has no memory of previous calls.
+The MCP server supports **stateful multi-turn sessions** — Grok remembers previous messages:
 
-**Context must be explicitly provided each time:**
 ```
-# BAD — Grok won't remember
-"Continue the security audit from before"
+# Start a session
+grok_session_start(mode="analyze", files=["src/auth.py"])
+→ returns session_id: "abc123"
 
-/# GOOD — Include all context explicitly
-"Continue security audit. Previous findings: [paste findings]. Now check data validation."
+# Continue the conversation — Grok remembers
+grok_session_continue(session_id="abc123", message="What about the password hashing?")
+grok_session_continue(session_id="abc123", message="Suggest fixes for the issues found")
 ```
 
-**See Issue #30** for planned stateful session support.
+Sessions have:
+- **30-minute TTL** — auto-expire after inactivity
+- **Token budget tracking** — warns when approaching cost limits
+- **Max 10 concurrent sessions** — oldest evicted when full
 
-### 2. ⚠️ NO Streaming — Single Response Only
+## Limitations
+
+### 1. ⚠️ NO Streaming — Single Response Only
 The bridge waits for full response before returning. No real-time updates.
 
-### 3. ⚠️ NO Native Agent Pool
-Grok cannot be registered as a Claude sub-agent. Orchestration is manual:
-- Run Grok in background: `python3 grok_bridge.py [args] &`
-- Continue Claude work independently
-- Collect Grok results when needed
+### 2. ⚠️ NO Tool Passthrough (Currently)
+Built-in Grok tools (web search, code execution) are **not enabled** by default. Sub-agent tools (read_file, write_file, search_code) are planned for Phase 3.
 
-### 4. ⚠️ NO Tool Passthrough (Currently)
-Built-in Grok tools (web search, code execution) are **not enabled** by default. The bridge uses Grok for reasoning only, not tool calling.
-
-### 5. ⚠️ Rate Limiting
+### 3. ⚠️ Rate Limiting
 OpenRouter may rate limit. If seeing errors, add delays between calls.
 
 ## Safe Multi-Agent Coordination Patterns
