@@ -174,6 +174,8 @@ def main():
                         help="Execute command after generation (shell string)")
     parser.add_argument("--use-morph", action="store_true",
                         help="Use Morph LLM MCP for file edits if available")
+    parser.add_argument("--thinking", choices=["low", "high"], default="low",
+                        help="Thinking level: low=4-agent swarm (default), high=16-agent swarm")
 
     args = parser.parse_args()
 
@@ -202,7 +204,8 @@ def main():
         with open(args.tools, 'r', encoding='utf-8') as f:
             tools = json.load(f)
 
-    print(f"Calling Grok 4.20 (mode={args.mode}, 4 agents)...", file=sys.stderr)
+    agent_count = 16 if args.thinking == "high" else 4
+    print(f"Calling Grok 4.20 (mode={args.mode}, {agent_count} agents)...", file=sys.stderr)
 
     start = time.time()
     result = call_grok(
@@ -212,6 +215,7 @@ def main():
         system_override=args.system,
         tools=tools,
         timeout=args.timeout,
+        thinking=args.thinking,
     )
     elapsed = time.time() - start
 
