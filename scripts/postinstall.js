@@ -24,7 +24,12 @@ if (hasEnvKey) {
 } else {
   console.log('⚠ No API key configured yet');
   console.log('');
-  console.log('Run ./scripts/setup.sh to configure your OpenRouter API key');
+  if (process.platform === 'win32') {
+    console.log('Run:  python3 scripts/oauth_setup.py');
+    console.log('  or: set OPENROUTER_API_KEY=sk-or-v1-...');
+  } else {
+    console.log('Run ./scripts/setup.sh to configure your OpenRouter API key');
+  }
   console.log('Get a key at: https://openrouter.ai/keys');
 }
 

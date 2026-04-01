@@ -29,9 +29,10 @@
   "main": "dist/index.js",
   "bin": {
     "grok-swarm": "dist/index.js",
-    "grok-swarm-mcp": "src/mcp/grok_server.py"
+    "grok-swarm-mcp": "bin/grok-swarm-mcp.js"
   },
   "files": [
+    "bin/",
     "dist/",
     "src/",
     "README.md",
