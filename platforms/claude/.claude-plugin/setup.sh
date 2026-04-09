@@ -2,7 +2,7 @@
 # Setup for Grok Swarm — delegates to PKCE OAuth flow
 # The API key NEVER passes through Claude's context window.
 
-set -e
+set -euo pipefail
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CONFIG_DIR="${HOME}/.config/grok-swarm"
@@ -144,5 +144,6 @@ else
 fi
 
 echo
-echo "Run '/grok-swarm:analyze Find bugs in this codebase' to get started."
-echo "Or use the native MCP tools: grok_query, grok_session_start, grok_session_continue"
+echo "Run '/grok-swarm' or '/grok-swarm-analyze Find bugs in this codebase' to get started."
+echo "Other searchable commands: /grok-swarm-refactor, /grok-swarm-code, /grok-swarm-reason, /grok-swarm-stats, /grok-swarm-set-key"
+echo "Native MCP tools: grok_query, grok_session_start, grok_session_continue, grok_agent"

@@ -234,6 +234,40 @@ class TestErrorMessageImprovements:
 
 
 #-------------------------------------------------------------------------------
+# Test 1.7: Claude Command Surface
+#-------------------------------------------------------------------------------
+
+class TestClaudeCommandSurface:
+    """Tests for Claude-facing command bootstrap assets."""
+
+    def test_grok_prefixed_command_files_exist(self):
+        """Searchable Grok-prefixed Claude commands should be bundled."""
+        repo_root = Path(__file__).parent.parent.parent
+        required_commands = [
+            "platforms/claude/commands/grok-swarm.md",
+            "platforms/claude/commands/grok-swarm-setup.md",
+            "platforms/claude/commands/grok-swarm-analyze.md",
+            "platforms/claude/commands/grok-swarm-refactor.md",
+            "platforms/claude/commands/grok-swarm-code.md",
+            "platforms/claude/commands/grok-swarm-reason.md",
+            "platforms/claude/commands/grok-swarm-stats.md",
+            "platforms/claude/commands/grok-swarm-set-key.md",
+        ]
+
+        missing = [path for path in required_commands if not (repo_root / path).exists()]
+        assert not missing, f"Missing Grok command files: {missing}"
+
+    def test_command_helper_bootstraps_plugin_runtime(self):
+        """The shared command helper should call plugin setup when runtime is missing."""
+        helper_path = Path(__file__).parent.parent.parent / "platforms" / "claude" / "commands" / "setup.sh"
+        content = helper_path.read_text(encoding="utf-8")
+
+        assert '.claude-plugin/setup.sh' in content
+        assert 'claude mcp list' in content
+        assert 'python3' in content
+
+
+#-------------------------------------------------------------------------------
 # Main
 #-------------------------------------------------------------------------------
 

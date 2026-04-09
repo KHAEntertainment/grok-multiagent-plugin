@@ -17,6 +17,14 @@ All notable changes to the Grok Swarm tool.
 - npm jumps directly from `1.0.0` to `1.3.3` because prior `1.3.0`-`1.3.2` tags never published successfully
 - Open issue `#34` remains deferred for follow-up OpenClaw parity work
 
+## [1.3.4] - 2026-04-08
+
+### Fixed
+
+- Added searchable Claude commands named `/grok-swarm`, `/grok-swarm-setup`, `/grok-swarm-analyze`, `/grok-swarm-refactor`, `/grok-swarm-code`, `/grok-swarm-reason`, and `/grok-swarm-stats`
+- Made Grok Claude commands self-bootstrap the plugin-local runtime and MCP registration on first use instead of relying on reinstall behavior
+- Corrected Claude-facing docs that previously described unsupported `/grok-swarm:...` command names
+
 ## [1.0.0] - 2026-03-16
 
 ### Added

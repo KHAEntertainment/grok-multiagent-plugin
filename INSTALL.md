@@ -15,7 +15,7 @@ npm install -g @khaentertainment/grok-swarm
 Or with a specific version:
 
 ```bash
-npm install -g @khaentertainment/grok-swarm@1.3.3
+npm install -g @khaentertainment/grok-swarm@1.3.4
 ```
 
 ### Post-install Setup
@@ -103,16 +103,17 @@ Install the plugin from the Claude Code marketplace.
 
 ### Step 3: Configure API Key
 
-Run `/grok-swarm:setup` inside Claude Code — an OAuth browser flow will
-authorize your OpenRouter account without exposing your API key in-context.
+Run `/grok-swarm` or `/grok-swarm-setup` inside Claude Code. That bootstraps
+the plugin-local runtime, registers the Grok MCP server, and launches OAuth if
+your OpenRouter key is not configured yet.
 
 ### Usage in Claude Code
 
 ```
-/grok-swarm:analyze Review the security of my auth module
-/grok-swarm:refactor Convert these callbacks to async/await
-/grok-swarm:code Write a FastAPI endpoint for user registration
-/grok-swarm:reason Compare microservices vs monolith for this project
+/grok-swarm-analyze Review the security of my auth module
+/grok-swarm-refactor Convert these callbacks to async/await
+/grok-swarm-code Write a FastAPI endpoint for user registration
+/grok-swarm-reason Compare microservices vs monolith for this project
 ```
 
 ---
@@ -146,7 +147,7 @@ cp -r src/plugin ~/.openclaw/extensions/grok-swarm/
 
 ### Configure API Key
 
-**For Claude Code:** Run `/grok-swarm:setup` — OAuth browser flow, no key in-context.
+**For Claude Code:** Run `/grok-swarm` or `/grok-swarm-setup` — this bootstraps the local runtime, registers MCP, and launches OAuth if needed.
 
 **For OpenClaw/CLI:** Run `./scripts/setup.sh` or set `OPENROUTER_API_KEY` manually.
 
@@ -176,10 +177,10 @@ grok-swarm --help
 
 ```
 # Authorize via OAuth (no API key in-context)
-/grok-swarm:setup
+/grok-swarm-setup
 
 # Try it out
-/grok-swarm:analyze Review my auth module for security issues
+/grok-swarm-analyze Review my auth module for security issues
 ```
 
 ### For OpenClaw

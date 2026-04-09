@@ -40,9 +40,9 @@ tools.grok_swarm({
 ### Claude Code
 
 ```
-/grok-swarm:analyze Review auth module security
-/grok-swarm:refactor Convert to async/await
-/grok-swarm:code Write FastAPI endpoint
+/grok-swarm-analyze Review auth module security
+/grok-swarm-refactor Convert to async/await
+/grok-swarm-code Write FastAPI endpoint
 ```
 
 ## Task Modes

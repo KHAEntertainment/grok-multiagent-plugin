@@ -359,7 +359,7 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
         print("  2. ~/.config/grok-swarm/config.json", file=sys.stderr)
         print("  3. ~/.claude/grok-swarm.local.md", file=sys.stderr)
         print("  4. OpenClaw auth profiles (~/.openclaw/)", file=sys.stderr)
-        print("Run: python3 src/bridge/oauth_setup.py   or   /grok-swarm:setup", file=sys.stderr)
+        print("Run: python3 src/bridge/oauth_setup.py   or   /grok-swarm-setup", file=sys.stderr)
         sys.exit(1)
 
     # Resolve system prompt

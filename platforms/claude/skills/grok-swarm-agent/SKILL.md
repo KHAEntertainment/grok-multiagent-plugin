@@ -52,7 +52,7 @@ grok agent analyze security vulnerabilities --target ./src
 ## Requirements
 
 - Grok Swarm plugin installed and configured
-- OpenRouter API key set up (run `/grok-swarm:setup` if needed)
+- OpenRouter API key set up (run `/grok-swarm-setup` if needed)
 
 ## Output
 

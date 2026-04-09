@@ -28,7 +28,7 @@ try:
 except ImportError:
     print(
         "ERROR: openai package required for this Grok Swarm runtime. "
-        "Install from src/requirements.txt or run /grok-swarm:setup to bootstrap the plugin-local environment.",
+        "Install from src/requirements.txt or run /grok-swarm-setup to bootstrap the plugin-local environment.",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -330,7 +330,7 @@ def _get_client(api_key=None, timeout=120):
             "No OpenRouter API key found. "
             "Tried: OPENROUTER_API_KEY env, ~/.config/grok-swarm/config.json, "
             "~/.claude/grok-swarm.local.md, OpenClaw auth profiles. "
-            "Run: python3 src/bridge/oauth_setup.py  or  /grok-swarm:setup"
+            "Run: python3 src/bridge/oauth_setup.py  or  /grok-swarm-setup"
         )
     return OpenAI(base_url=OPENROUTER_BASE, api_key=key, timeout=timeout)
 
@@ -403,7 +403,7 @@ def call_grok(prompt, mode="reason", context="", system_override=None, tools=Non
         print("  2. ~/.config/grok-swarm/config.json", file=sys.stderr)
         print("  3. ~/.claude/grok-swarm.local.md", file=sys.stderr)
         print("  4. OpenClaw auth profiles (~/.openclaw/)", file=sys.stderr)
-        print("Run: python3 src/bridge/oauth_setup.py   or   /grok-swarm:setup", file=sys.stderr)
+        print("Run: python3 src/bridge/oauth_setup.py   or   /grok-swarm-setup", file=sys.stderr)
         sys.exit(1)
 
     # Resolve system prompt
