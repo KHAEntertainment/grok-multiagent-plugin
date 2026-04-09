@@ -97,7 +97,7 @@ Choose the method that fits your platform:
 ### Option 1: NPM (Recommended — CLI Tool)
 
 ```bash
-npm install -g @openclaw/grok-swarm
+npm install -g @khaentertainment/grok-swarm
 
 # Set up API key
 ./scripts/setup.sh
@@ -241,6 +241,12 @@ unset OPENROUTER_API_KEY
 **Get a key at:** https://openrouter.ai/keys
 
 ---
+
+## Release Note
+
+`1.3.3` is the first npm release after the failed `1.3.0`-`1.3.2` publish attempts.
+If you previously installed `1.0.0`, upgrade directly to `1.3.3` to get the MCP server,
+OAuth helper, autonomous agent runtime, and the rest of the Claude/OpenClaw stabilization fixes.
 
 ## Morph LLM Integration
 

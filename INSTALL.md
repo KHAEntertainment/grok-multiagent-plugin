@@ -9,13 +9,13 @@ This document covers all ways to install the Grok Swarm plugin.
 Install the CLI tool for direct terminal usage.
 
 ```bash
-npm install -g @openclaw/grok-swarm
+npm install -g @khaentertainment/grok-swarm
 ```
 
 Or with a specific version:
 
 ```bash
-npm install -g @openclaw/grok-swarm@1.0.0
+npm install -g @khaentertainment/grok-swarm@1.3.3
 ```
 
 ### Post-install Setup
@@ -238,7 +238,7 @@ echo $OPENROUTER_API_KEY
 ### NPM
 
 ```bash
-npm update -g @openclaw/grok-swarm
+npm update -g @khaentertainment/grok-swarm
 ```
 
 ### ClawHub
@@ -268,7 +268,7 @@ git pull origin main
 ### NPM
 
 ```bash
-npm uninstall -g @openclaw/grok-swarm
+npm uninstall -g @khaentertainment/grok-swarm
 ```
 
 ### ClawHub

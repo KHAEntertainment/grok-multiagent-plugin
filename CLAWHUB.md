@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | **Name** | `grok-swarm` |
-| **Version** | `1.3.2` |
+| **Version** | `1.3.3` |
 | **Min OpenClaw** | `2026.3.0` |
 
 ## Installation

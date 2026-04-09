@@ -2,6 +2,21 @@
 
 All notable changes to the Grok Swarm tool.
 
+## [1.3.3] - 2026-04-08
+
+### Fixed
+
+- Made the Claude marketplace bundle self-contained by syncing the runtime into `platforms/claude/src/`
+- Bootstrapped a plugin-local `.venv` during Claude setup so installs do not depend on global Python packages
+- Stopped Claude setup from exiting early when an API key already exists, so MCP registration still runs
+- Added release verification for the Claude plugin bundle and npm tarball contents
+- Added `package-lock.json` support so the tag-based npm publish workflow can finally run with `npm ci`
+
+### Notes
+
+- npm jumps directly from `1.0.0` to `1.3.3` because prior `1.3.0`-`1.3.2` tags never published successfully
+- Open issue `#34` remains deferred for follow-up OpenClaw parity work
+
 ## [1.0.0] - 2026-03-16
 
 ### Added

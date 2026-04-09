@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "name": "grok-swarm",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "displayName": "Grok Swarm",
   "description": "Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Use for codebase analysis, refactoring, code generation, and complex reasoning.",
   "author": {

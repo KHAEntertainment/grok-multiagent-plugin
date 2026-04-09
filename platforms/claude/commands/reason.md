@@ -28,19 +28,11 @@ Multi-perspective collaborative reasoning using Grok 4.20's multi-agent swarm.
 ## Step 1 — Check API key
 
 ```bash
-python3 -c "
-import json, os
-from pathlib import Path
-config = Path.home() / '.config' / 'grok-swarm' / 'config.json'
-env_key = os.environ.get('OPENROUTER_API_KEY') or os.environ.get('XAI_API_KEY')
-if env_key:
-    print('key:env')
-elif config.exists():
-    data = json.loads(config.read_text())
-    print('key:file' if data.get('api_key') else 'nokey')
-else:
-    print('nokey')
-"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find ~/.claude/plugins -path '*/grok-swarm/.claude-plugin/plugin.json' -exec dirname {} \; 2>/dev/null | head -1 | xargs -I{} dirname {})}"
+[ -z "$PLUGIN_ROOT" ] && { echo "missing-plugin"; exit 1; }
+PYTHON_BIN="$PLUGIN_ROOT/.venv/bin/python3"
+[ -x "$PYTHON_BIN" ] || PYTHON_BIN=python3
+"$PYTHON_BIN" "$PLUGIN_ROOT/src/bridge/oauth_setup.py" --check >/dev/null 2>&1 && echo key || echo nokey
 ```
 
 If `nokey`, direct the user to `/grok-swarm:setup` or `/grok-swarm:set-key`.
@@ -48,9 +40,11 @@ If `nokey`, direct the user to `/grok-swarm:setup` or `/grok-swarm:set-key`.
 ## Step 2 — Run reasoning
 
 ```bash
-PLUGIN_ROOT="$(find ~/.claude/plugins -name 'grok_bridge.py' -exec dirname {} \; 2>/dev/null | head -1 | xargs -I{} dirname {})"
-[ -z "$PLUGIN_ROOT" ] && PLUGIN_ROOT="$(find /usr /usr/local ~/.local -name 'grok_bridge.py' -exec dirname {} \; 2>/dev/null | head -1 | xargs -I{} dirname {})"
-python3 "$PLUGIN_ROOT/src/bridge/cli.py" reason "$ARGUMENTS"
+PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(find ~/.claude/plugins -path '*/grok-swarm/.claude-plugin/plugin.json' -exec dirname {} \; 2>/dev/null | head -1 | xargs -I{} dirname {})}"
+[ -z "$PLUGIN_ROOT" ] && { echo "Grok Swarm plugin not found."; exit 1; }
+PYTHON_BIN="$PLUGIN_ROOT/.venv/bin/python3"
+[ -x "$PYTHON_BIN" ] || PYTHON_BIN=python3
+"$PYTHON_BIN" "$PLUGIN_ROOT/src/bridge/cli.py" reason "$ARGUMENTS"
 ```
 
 ## Step 3 — Present results

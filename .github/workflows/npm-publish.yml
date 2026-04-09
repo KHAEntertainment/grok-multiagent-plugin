@@ -26,6 +26,9 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: Verify release bundle
+        run: npm run verify:release
+
       - name: Publish to npm
         run: npm publish
         env:

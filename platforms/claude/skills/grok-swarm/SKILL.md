@@ -2,7 +2,7 @@
 name: grok-swarm
 description: Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Use for codebase analysis, refactoring, code generation, and complex reasoning. Triggers: "use grok swarm", "grok 4.20", "multi-agent analysis", "codebase audit", "grok refactor", "16 agent mode"
 author: OpenClaw
-version: 1.2.0
+version: 1.3.3
 ---
 
 # Grok Swarm
@@ -30,7 +30,7 @@ If you prefer manual setup:
 /grok-swarm:setup
 ```
 
-This stores your API key in `~/.claude/grok-swarm.local.md` (plugin settings pattern).
+This stores your API key in `~/.config/grok-swarm/config.json` and also refreshes the bundled MCP runtime.
 
 ## Modes
 
