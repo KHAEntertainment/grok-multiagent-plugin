@@ -81,10 +81,10 @@ grok_agent(task="Refactor auth module", target="./src/auth", apply=true)
 ### Alternative: Skill Commands
 
 ```
-/grok-swarm:reason <task>
-/grok-swarm:analyze <task>
-/grok-swarm:code <task>
-/grok-swarm:refactor <task>
+/grok-swarm-reason <task>
+/grok-swarm-analyze <task>
+/grok-swarm-code <task>
+/grok-swarm-refactor <task>
 ```
 
 ### Alternative: Direct CLI
@@ -113,7 +113,7 @@ python3 src/bridge/grok_bridge.py --mode <mode> --prompt "<task>" [options]
 
 Pass files for Grok to analyze:
 ```
-/grok-swarm:analyze Find bugs --files src/foo.py src/bar.py
+/grok-swarm-analyze Find bugs --files src/foo.py src/bar.py
 ```
 
 **IMPORTANT — How file reading works:**
@@ -225,7 +225,7 @@ The agent loop iteratively improves code, writing directly to disk each iteratio
 
 | Error | Cause | Recovery |
 |-------|-------|----------|
-| `No OpenRouter API key found` | Key not configured | Run `/grok-swarm:setup` |
+| `No OpenRouter API key found` | Key not configured | Run `/grok-swarm-setup` |
 | `HTTP 400` | Invalid request/policy | Check prompt, reduce size |
 | `HTTP 429` | Rate limited | Wait, retry with backoff |
 | `HTTP 401` | Invalid/expired key | Re-authenticate |

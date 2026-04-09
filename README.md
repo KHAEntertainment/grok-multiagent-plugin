@@ -113,8 +113,9 @@ npm install -g @khaentertainment/grok-swarm
 /plugin install grok-swarm@khaentertainment
 ```
 
-Then run `/grok-swarm:setup` inside Claude Code — an OAuth browser flow will
-authorize your OpenRouter account without exposing your API key in-context.
+Then run `/grok-swarm` or `/grok-swarm-setup` inside Claude Code. That bootstraps
+the plugin-local runtime, registers the Grok MCP server, and launches OAuth if
+your OpenRouter key is not configured yet.
 
 ### Option 3: ClawHub (OpenClaw)
 
@@ -146,10 +147,10 @@ For detailed instructions for each method, see [INSTALL.md](INSTALL.md).
 ### For Claude Code
 
 ```
-/grok-swarm:analyze Review the security of my auth module
-/grok-swarm:refactor Convert these callbacks to async/await
-/grok-swarm:code Write a FastAPI endpoint for user registration
-/grok-swarm:reason Compare microservices vs monolith for this project
+/grok-swarm-analyze Review the security of my auth module
+/grok-swarm-refactor Convert these callbacks to async/await
+/grok-swarm-code Write a FastAPI endpoint for user registration
+/grok-swarm-reason Compare microservices vs monolith for this project
 ```
 
 ### For OpenClaw
@@ -177,10 +178,10 @@ const result = await tools.grok_swarm({
 ### Claude Code
 
 ```
-/grok-swarm:analyze Review the security of my auth module
-/grok-swarm:refactor Convert this to async/await
-/grok-swarm:code Write a FastAPI user registration endpoint
-/grok-swarm:reason Compare these two architectural approaches
+/grok-swarm-analyze Review the security of my auth module
+/grok-swarm-refactor Convert this to async/await
+/grok-swarm-code Write a FastAPI user registration endpoint
+/grok-swarm-reason Compare these two architectural approaches
 ```
 
 ### OpenClaw
@@ -244,9 +245,10 @@ unset OPENROUTER_API_KEY
 
 ## Release Note
 
-`1.3.3` is the first npm release after the failed `1.3.0`-`1.3.2` publish attempts.
-If you previously installed `1.0.0`, upgrade directly to `1.3.3` to get the MCP server,
-OAuth helper, autonomous agent runtime, and the rest of the Claude/OpenClaw stabilization fixes.
+`1.3.4` fixes the Claude command surface after `1.3.3`.
+If you previously installed `1.3.3`, upgrade to `1.3.4` to get searchable
+`/grok-swarm-*` commands plus first-use bootstrap that repairs missing MCP
+registration from inside Claude Code itself.
 
 ## Morph LLM Integration
 

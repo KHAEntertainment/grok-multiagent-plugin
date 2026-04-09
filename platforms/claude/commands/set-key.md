@@ -8,7 +8,7 @@ allowed-tools:
 
 # Set Grok Swarm API Key (Manual Fallback)
 
-**Use this only when the OAuth flow (`/grok-swarm:setup`) has failed repeatedly.**
+**Use this only when the OAuth flow (`/grok-swarm-setup`) has failed repeatedly.**
 
 ## Step 1 — Display security warning
 
@@ -23,21 +23,21 @@ Before doing anything else, output this warning verbatim to the user:
 > stored in conversation logs.
 >
 > **Only proceed if you understand and accept these risks.** The recommended method
-> is `/grok-swarm:setup` which uses OAuth so your key never enters the conversation.
+> is `/grok-swarm-setup` which uses OAuth so your key never enters the conversation.
 >
 > Type **yes** to confirm you accept this risk, or anything else to cancel.
 
 ---
 
-Wait for the user's response. If they do not reply with exactly `yes` (case-insensitive), stop here and remind them to use `/grok-swarm:setup` instead.
+Wait for the user's response. If they do not reply with exactly `yes` (case-insensitive), stop here and remind them to use `/grok-swarm-setup` instead.
 
 ## Step 2 — Validate the key argument
 
-The API key is the argument passed to this command (e.g. `/grok-swarm:set-key sk-or-v1-...`).
+The API key is the argument passed to this command (e.g. `/grok-swarm-set-key sk-or-v1-...`).
 
 If no argument was provided, ask the user to re-run with their key:
 ```
-/grok-swarm:set-key YOUR_API_KEY_HERE
+/grok-swarm-set-key YOUR_API_KEY_HERE
 ```
 Do not ask them to type the key in a follow-up message.
 
@@ -77,10 +77,10 @@ print('saved')
 Tell the user:
 - Key saved to `~/.config/grok-swarm/config.json` (permissions: 600)
 - Show only the first 8 characters: `sk-or-v1-...` → `sk-or-v1-` + `[redacted]`
-- Suggest running `/grok-swarm:analyze Hello world` to verify the key works
+- Suggest running `/grok-swarm-analyze Hello world` to verify the key works
 
 ## Notes
 
-- This command exists as a last resort. Always prefer `/grok-swarm:setup` (OAuth flow).
+- This command exists as a last resort. Always prefer `/grok-swarm-setup` (OAuth flow).
 - The key is saved with file permissions 600 (owner read/write only).
-- If you need to rotate the key later, run this command again or re-run `/grok-swarm:setup`.
+- If you need to rotate the key later, run this command again or re-run `/grok-swarm-setup`.
