@@ -30,6 +30,8 @@ jobs:
         run: npm run verify:release
 
       - name: Publish to npm
-        run: npm publish
+        run: |
+          export NODE_AUTH_TOKEN="$(printf %s "$NODE_AUTH_TOKEN" | tr -d '\r\n')"
+          npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_SECRET }}
