@@ -8,5 +8,8 @@
     "name": "Billy Brenner & Claude"
   },
   "license": "MIT",
-  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin"
+  "homepage": "https://github.com/KHAEntertainment/grok-multiagent-plugin",
+  "commands": "./commands",
+  "skills": "./skills",
+  "mcpServers": "./.mcp.json"
 }
