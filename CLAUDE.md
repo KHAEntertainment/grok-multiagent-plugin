@@ -58,6 +58,12 @@ xAI Grok 4.20 Multi-Agent Beta
 - `src/shared/patterns.py` — Centralized regex patterns for filename detection, shared between bridge and agent.
 - `src/plugin/index.ts` — OpenClaw plugin: registers `grok_swarm` (single call) and `grok_swarm_agent` (autonomous loop) tools.
 
+**Claude Code plugin structure** (`platforms/claude/`):
+- `.claude-plugin/plugin.json` — Plugin manifest (name, version, author, commands/skills/mcpServers paths)
+- `.mcp.json` — Static MCP server declaration (stdio transport)
+- `skills/grok-swarm/` — Skill directory with `SKILL.md` + `references/` + `scripts/` subdirs
+- `src/mcp/grok_server.py` — MCP server exposing `grok_query`, `grok_session_start`, `grok_session_continue`, `grok_agent`
+
 ## API Key Resolution Priority
 
 `grok_bridge.py:get_api_key()` checks in order:
