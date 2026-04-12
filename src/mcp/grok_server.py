@@ -290,7 +290,7 @@ def _handle_grok_query(params):
             written = parse_and_write_files(cleaned, output_dir)
         except (OSError, IOError) as exc:
             log.error("Failed to write files: %s", exc)
-            return _text_content(f"Failed to write files: {exc}")
+            return _error_content(f"Failed to write files: {exc}")
         if written:
             paths = ", ".join(p for p, _ in written)
             return _text_content(f"{len(written)} file(s) written to {output_dir}: {paths}")
@@ -360,8 +360,9 @@ def _handle_grok_session_continue(params):
     if write_files:
         try:
             written = parse_and_write_files(cleaned, output_dir)
-        except Exception as exc:
-            return _text_content(f"Failed to write files: {exc}")
+        except (OSError, IOError) as exc:
+            log.error("Failed to write files to %s: %s", output_dir, exc)
+            return _error_content(f"Failed to write files: {exc}")
         if written:
             paths = ", ".join(p for p, _ in written)
             return _text_content(f"{len(written)} file(s) written to {output_dir}: {paths}")
