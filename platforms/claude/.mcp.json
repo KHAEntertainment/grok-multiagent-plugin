@@ -1,0 +1,9 @@
+{
+  "grok-swarm": {
+    "command": "python3",
+    "args": ["${PLUGIN_ROOT}/src/mcp/grok_server.py"],
+    "env": {
+      "PYTHONPATH": "${PLUGIN_ROOT}/src"
+    }
+  }
+}

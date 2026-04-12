@@ -160,3 +160,7 @@ View or change settings:
 - Python 3.8+
 - OpenRouter API key with Grok 4.20 access
 - Optional: Morph LLM MCP (`claude mcp add morphllm`)
+
+## Agent-to-Agent Integration
+
+For AI agents delegating tasks to Grok Swarm, see the [Agent Integration Guide](references/skill-agent.md).

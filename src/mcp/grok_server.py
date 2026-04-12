@@ -31,6 +31,7 @@ from bridge.grok_bridge import (
     get_api_key,
     read_files,
     strip_pgp_blocks,
+    parse_and_write_files,
     MODE_PROMPTS,
     AGENT_COUNTS,
 )
@@ -63,6 +64,21 @@ PROTOCOL_VERSION = "2024-11-05"
 # ---------------------------------------------------------------------------
 # Tool definitions (JSON Schema format for MCP, NOT OpenAI format)
 # ---------------------------------------------------------------------------
+
+# JSON Schema fragments parsed at import time so defaults use lowercase JSON
+# true/false rather than Python True/False literals.
+_WRITE_FILES_SCHEMA = json.loads(
+    '{"type": "boolean", "default": false, '
+    '"description": "Whether to parse and write code blocks from the response to disk."}'
+)
+_OUTPUT_DIR_SCHEMA = json.loads(
+    '{"type": "string", "default": "./grok-output/", '
+    '"description": "Output directory for write_files mode."}'
+)
+_BOOL_FALSE_SCHEMA = json.loads(
+    '{"type": "boolean", "default": false, '
+    '"description": "Whether to actually write changes (default: dry-run preview)."}'
+)
 
 TOOLS = [
     {
@@ -105,6 +121,8 @@ TOOLS = [
                     "default": 120,
                     "description": "API timeout in seconds.",
                 },
+                "write_files": _WRITE_FILES_SCHEMA,
+                "output_dir": _OUTPUT_DIR_SCHEMA,
             },
             "required": ["prompt"],
         },
@@ -140,6 +158,16 @@ TOOLS = [
                     "items": {"type": "string"},
                     "description": "File paths to include as initial context.",
                 },
+                "write_files": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Accepted for API consistency; applies only to grok_session_continue.",
+                },
+                "output_dir": {
+                    "type": "string",
+                    "default": "./grok-output/",
+                    "description": "Accepted for API consistency; applies only to grok_session_continue.",
+                },
             },
             "required": [],
         },
@@ -166,6 +194,8 @@ TOOLS = [
                     "items": {"type": "string"},
                     "description": "Additional file paths to add as context.",
                 },
+                "write_files": _WRITE_FILES_SCHEMA,
+                "output_dir": _OUTPUT_DIR_SCHEMA,
             },
             "required": ["session_id", "message"],
         },
@@ -189,11 +219,7 @@ TOOLS = [
                     "default": ".",
                     "description": "Target directory or file to operate on.",
                 },
-                "apply": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Whether to actually write changes (default: dry-run preview).",
-                },
+                "apply": _BOOL_FALSE_SCHEMA,
                 "max_iterations": {
                     "type": "integer",
                     "default": 5,
@@ -222,6 +248,8 @@ def _handle_grok_query(params):
     system = params.get("system")
     thinking = params.get("thinking", "low")
     timeout = params.get("timeout", 120)
+    write_files = params.get("write_files", False)
+    output_dir = params.get("output_dir", "./grok-output/")
 
     if mode == "orchestrate" and not system:
         return _error_content("orchestrate mode requires the 'system' parameter")
@@ -255,7 +283,19 @@ def _handle_grok_query(params):
         return _error_content("Empty response from Grok API")
 
     content = response.choices[0].message.content or ""
-    return _text_content(strip_pgp_blocks(content))
+    cleaned = strip_pgp_blocks(content)
+
+    if write_files:
+        try:
+            written = parse_and_write_files(cleaned, output_dir)
+        except (OSError, IOError) as exc:
+            log.error("Failed to write files: %s", exc)
+            return _error_content(f"Failed to write files: {exc}")
+        if written:
+            paths = ", ".join(p for p, _ in written)
+            return _text_content(f"{len(written)} file(s) written to {output_dir}: {paths}")
+        # Fall back to printing the response text if no files were written
+    return _text_content(cleaned)
 
 
 def _handle_grok_session_start(params):
@@ -266,6 +306,8 @@ def _handle_grok_session_start(params):
     system = params.get("system")
     thinking = params.get("thinking", "low")
     files = params.get("files", [])
+    # write_files and output_dir params are accepted for API consistency
+    # but apply to grok_session_continue, not the session start itself
 
     # Read initial file context
     file_context = ""
@@ -296,6 +338,8 @@ def _handle_grok_session_continue(params):
     session_id = params["session_id"]
     message = params["message"]
     files = params.get("files", [])
+    write_files = params.get("write_files", False)
+    output_dir = params.get("output_dir", "./grok-output/")
 
     session = session_mod.get_session(session_id)
     if session is None:
@@ -312,7 +356,17 @@ def _handle_grok_session_continue(params):
         log.error("Session %s error: %s", session_id, exc)
         return _error_content(f"Grok API error: {exc}")
 
-    return _text_content(strip_pgp_blocks(response))
+    cleaned = strip_pgp_blocks(response)
+    if write_files:
+        try:
+            written = parse_and_write_files(cleaned, output_dir)
+        except (OSError, IOError) as exc:
+            log.error("Failed to write files to %s: %s", output_dir, exc)
+            return _error_content(f"Failed to write files: {exc}")
+        if written:
+            paths = ", ".join(p for p, _ in written)
+            return _text_content(f"{len(written)} file(s) written to {output_dir}: {paths}")
+    return _text_content(cleaned)
 
 
 def _handle_grok_agent(params):
