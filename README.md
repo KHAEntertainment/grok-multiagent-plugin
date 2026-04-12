@@ -261,7 +261,7 @@ grok-swarm refactor --prompt "Convert this function to async" --use-morph --appl
 This requires Morph LLM MCP installed:
 
 ```bash
-claude mcp add morphllm
+claude mcp add morphllm 
 ```
 
 ---
