@@ -62,7 +62,7 @@ xAI Grok 4.20 Multi-Agent Beta
 - `.claude-plugin/plugin.json` — Plugin manifest (name, version, author, commands/skills/mcpServers paths)
 - `.mcp.json` — Static MCP server declaration (stdio transport)
 - `skills/grok-swarm/` — Skill directory with `SKILL.md` + `references/` + `scripts/` subdirs
-- `src/mcp/grok_server.py` — MCP server exposing `grok_query`, `grok_session_start`, `grok_session_continue`, `grok_agent`
+- `src/mcp/grok_server.py` — MCP server exposing `grok_query`, `grok_session_start`, `grok_session_continue`, `grok_agent`; when `write_files=true`, handlers parse annotated code blocks and write them to `output_dir` on disk, enabling skills to produce artifacts.
 
 ## API Key Resolution Priority
 

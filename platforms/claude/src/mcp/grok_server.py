@@ -65,6 +65,21 @@ PROTOCOL_VERSION = "2024-11-05"
 # Tool definitions (JSON Schema format for MCP, NOT OpenAI format)
 # ---------------------------------------------------------------------------
 
+# JSON Schema fragments parsed at import time so defaults use lowercase JSON
+# true/false rather than Python True/False literals.
+_WRITE_FILES_SCHEMA = json.loads(
+    '{"type": "boolean", "default": false, '
+    '"description": "Whether to parse and write code blocks from the response to disk."}'
+)
+_OUTPUT_DIR_SCHEMA = json.loads(
+    '{"type": "string", "default": "./grok-output/", '
+    '"description": "Output directory for write_files mode."}'
+)
+_BOOL_FALSE_SCHEMA = json.loads(
+    '{"type": "boolean", "default": false, '
+    '"description": "Whether to actually write changes (default: dry-run preview)."}'
+)
+
 TOOLS = [
     {
         "name": "grok_query",
@@ -106,16 +121,8 @@ TOOLS = [
                     "default": 120,
                     "description": "API timeout in seconds.",
                 },
-                "write_files": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Whether to parse and write code blocks from the response to disk.",
-                },
-                "output_dir": {
-                    "type": "string",
-                    "default": "./grok-output/",
-                    "description": "Output directory for write_files mode.",
-                },
+                "write_files": _WRITE_FILES_SCHEMA,
+                "output_dir": _OUTPUT_DIR_SCHEMA,
             },
             "required": ["prompt"],
         },
@@ -154,12 +161,12 @@ TOOLS = [
                 "write_files": {
                     "type": "boolean",
                     "default": False,
-                    "description": "Whether to parse and write code blocks from the response to disk.",
+                    "description": "Accepted for API consistency; applies only to grok_session_continue.",
                 },
                 "output_dir": {
                     "type": "string",
                     "default": "./grok-output/",
-                    "description": "Output directory for write_files mode.",
+                    "description": "Accepted for API consistency; applies only to grok_session_continue.",
                 },
             },
             "required": [],
@@ -187,16 +194,8 @@ TOOLS = [
                     "items": {"type": "string"},
                     "description": "Additional file paths to add as context.",
                 },
-                "write_files": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Whether to parse and write code blocks from the response to disk.",
-                },
-                "output_dir": {
-                    "type": "string",
-                    "default": "./grok-output/",
-                    "description": "Output directory for write_files mode.",
-                },
+                "write_files": _WRITE_FILES_SCHEMA,
+                "output_dir": _OUTPUT_DIR_SCHEMA,
             },
             "required": ["session_id", "message"],
         },
@@ -220,11 +219,7 @@ TOOLS = [
                     "default": ".",
                     "description": "Target directory or file to operate on.",
                 },
-                "apply": {
-                    "type": "boolean",
-                    "default": False,
-                    "description": "Whether to actually write changes (default: dry-run preview).",
-                },
+                "apply": _BOOL_FALSE_SCHEMA,
                 "max_iterations": {
                     "type": "integer",
                     "default": 5,
@@ -291,10 +286,15 @@ def _handle_grok_query(params):
     cleaned = strip_pgp_blocks(content)
 
     if write_files:
-        written = parse_and_write_files(cleaned, output_dir)
+        try:
+            written = parse_and_write_files(cleaned, output_dir)
+        except (OSError, IOError) as exc:
+            log.error("Failed to write files: %s", exc)
+            return _text_content(f"Failed to write files: {exc}")
         if written:
             paths = ", ".join(p for p, _ in written)
             return _text_content(f"{len(written)} file(s) written to {output_dir}: {paths}")
+        # Fall back to printing the response text if no files were written
     return _text_content(cleaned)
 
 
@@ -358,7 +358,10 @@ def _handle_grok_session_continue(params):
 
     cleaned = strip_pgp_blocks(response)
     if write_files:
-        written = parse_and_write_files(cleaned, output_dir)
+        try:
+            written = parse_and_write_files(cleaned, output_dir)
+        except Exception as exc:
+            return _text_content(f"Failed to write files: {exc}")
         if written:
             paths = ", ".join(p for p, _ in written)
             return _text_content(f"{len(written)} file(s) written to {output_dir}: {paths}")
