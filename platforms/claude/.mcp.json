@@ -1,9 +1,9 @@
 {
   "grok-swarm": {
     "command": "python3",
-    "args": ["${PLUGIN_ROOT}/src/mcp/grok_server.py"],
+    "args": ["/Users/bbrenner/.claude/plugins/cache/khaentertainment/grok-swarm/1.3.5/src/mcp/grok_server.py"],
     "env": {
-      "PYTHONPATH": "${PLUGIN_ROOT}/src"
+      "PYTHONPATH": "/Users/bbrenner/.claude/plugins/cache/khaentertainment/grok-swarm/1.3.5/src"
     }
   }
 }
