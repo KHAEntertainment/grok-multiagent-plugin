@@ -30,7 +30,8 @@ if [ "$NEEDS_SETUP" -eq 0 ] && ! "$PYTHON_BIN" -c "import openai" >/dev/null 2>&
 fi
 
 if command -v claude >/dev/null 2>&1; then
-    if ! claude mcp list 2>/dev/null | grep -q '^grok-swarm:'; then
+    if ! claude mcp list 2>/dev/null | grep -Eq '^(plugin:grok-swarm:grok-swarm|grok-swarm):'; then
+        log "Grok Swarm MCP server is not visible yet; setup will verify runtime and credentials."
         NEEDS_SETUP=1
     fi
 fi

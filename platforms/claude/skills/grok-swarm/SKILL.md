@@ -2,7 +2,7 @@
 name: grok-swarm
 description: Multi-agent intelligence powered by Grok 4.20 via OpenRouter. Use for codebase analysis, refactoring, code generation, and complex reasoning. Triggers: "use grok swarm", "grok 4.20", "multi-agent analysis", "codebase audit", "grok refactor", "16 agent mode"
 author: OpenClaw
-version: 1.3.4
+version: 1.3.6
 ---
 
 # Grok Swarm
