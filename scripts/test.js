@@ -18,6 +18,8 @@ const requiredClaudeCommands = [
   'platforms/claude/commands/grok-swarm-stats.md',
   'platforms/claude/commands/grok-swarm-set-key.md',
   'platforms/claude/commands/setup.sh',
+  'platforms/claude/scripts/bootstrap-runtime.sh',
+  'platforms/claude/scripts/mcp-server.sh',
 ];
 
 console.log('Running Grok Swarm CLI tests...\n');
@@ -33,6 +35,18 @@ if (missingFiles.length > 0) {
 }
 
 console.log(`✓ Claude bundle command files present (${requiredClaudeCommands.length})`);
+
+const mcpConfigPath = path.join(root, 'platforms/claude/.mcp.json');
+const mcpConfig = fs.readFileSync(mcpConfigPath, 'utf8');
+if (!mcpConfig.includes('${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.sh')) {
+  console.log('✗ Claude MCP config does not use the plugin-local wrapper');
+  process.exit(1);
+}
+if (mcpConfig.includes('${PLUGIN_ROOT}') || /\/Users\/|\/home\/|[A-Za-z]:\\/.test(mcpConfig)) {
+  console.log('✗ Claude MCP config contains non-portable paths');
+  process.exit(1);
+}
+console.log('✓ Claude MCP config is portable');
 
 // Test: grok-swarm --help
 const help = spawn('node', [grokBin, '--help'], { stdio: 'pipe' });

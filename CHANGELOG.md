@@ -2,6 +2,15 @@
 
 All notable changes to the Grok Swarm tool.
 
+## [1.3.6] - 2026-04-16
+
+### Fixed
+
+- Replaced the non-portable Claude plugin MCP config with a `${CLAUDE_PLUGIN_ROOT}` wrapper entrypoint
+- Added first-start MCP runtime bootstrapping so plugin MCP can create/use the plugin-local `.venv`
+- Stopped setup from creating duplicate manual `grok-swarm` MCP entries when Claude manages the plugin-scoped server
+- Added release checks that block machine-local absolute paths and `${PLUGIN_ROOT}` from shipping in Claude MCP config
+
 ## [1.3.3] - 2026-04-08
 
 ### Fixed

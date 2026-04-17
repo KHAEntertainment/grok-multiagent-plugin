@@ -16,10 +16,33 @@ function assertExists(relativePath) {
   }
 }
 
+function assertPortableClaudeMcpConfig() {
+  const mcpPath = path.join(root, 'platforms/claude/.mcp.json');
+  const raw = fs.readFileSync(mcpPath, 'utf8');
+  const parsed = JSON.parse(raw);
+
+  if (!parsed.mcpServers || !parsed.mcpServers['grok-swarm']) {
+    throw new Error('Claude MCP config must use standard mcpServers.grok-swarm shape');
+  }
+
+  if (raw.includes('${PLUGIN_ROOT}')) {
+    throw new Error('Claude MCP config must use ${CLAUDE_PLUGIN_ROOT}, not ${PLUGIN_ROOT}');
+  }
+
+  if (/\/Users\/|\/home\/|[A-Za-z]:\\/.test(raw)) {
+    throw new Error('Claude MCP config contains a machine-local absolute path');
+  }
+
+  if (!raw.includes('${CLAUDE_PLUGIN_ROOT}/scripts/mcp-server.sh')) {
+    throw new Error('Claude MCP config must launch the plugin-local MCP wrapper');
+  }
+}
+
 function main() {
   const requiredClaudeFiles = [
     'platforms/claude/.claude-plugin/plugin.json',
     'platforms/claude/.claude-plugin/setup.sh',
+    'platforms/claude/.mcp.json',
     'platforms/claude/commands/analyze.md',
     'platforms/claude/commands/code.md',
     'platforms/claude/commands/grok-swarm.md',
@@ -36,6 +59,8 @@ function main() {
     'platforms/claude/commands/setup.md',
     'platforms/claude/commands/setup.sh',
     'platforms/claude/commands/stats.md',
+    'platforms/claude/scripts/bootstrap-runtime.sh',
+    'platforms/claude/scripts/mcp-server.sh',
     'platforms/claude/src/requirements.txt',
     'platforms/claude/src/agent/grok_agent.py',
     'platforms/claude/src/bridge/cli.py',
@@ -45,6 +70,7 @@ function main() {
   ];
 
   requiredClaudeFiles.forEach(assertExists);
+  assertPortableClaudeMcpConfig();
 
   const packJson = execFileSync('npm', ['pack', '--dry-run', '--json'], {
     cwd: root,
